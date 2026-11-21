@@ -1,0 +1,121 @@
+rules_version = '2';
+service firebase.storage {
+  match /b/{bucket}/o {
+    // Global Safety Net (Default Deny)
+    match /{allPaths=**} {
+      allow read, write: if false;
+    }
+
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    function isVerifiedUser() {
+      return isSignedIn() && (
+        request.auth.token.email_verified == true ||
+        request.auth.token.phone_number != null ||
+        request.auth.token.firebase.sign_in_provider in ['apple.com', 'google.com', 'password', 'anonymous']
+      );
+    }
+
+    function isOwner(userId) {
+      return isSignedIn() && request.auth.uid == userId;
+    }
+
+    // Profile & cover photos strictly scoped to authenticated owner UID
+    match /profile_photos/{userId}/{fileName} {
+      allow read: if isSignedIn();
+      allow create, update: if isVerifiedUser()
+        && isOwner(userId)
+        && fileName.matches('^(avatar|cover)_[a-zA-Z0-9_\\-]+\\.(jpg|jpeg|png|webp)$')
+        && request.resource != null
+        && request.resource.size > 0
+        && request.resource.size <= 5 * 1024 * 1024
+        && request.resource.contentType.matches('^image/(jpeg|jpg|png|webp)$')
+        && (
+          !('ownerUid' in request.resource.metadata) ||
+          request.resource.metadata.ownerUid == request.auth.uid
+        );
+      allow delete: if isVerifiedUser() && isOwner(userId);
+    }
+
+    // Status updates (photos & recorded/uploaded videos, auto-cleaned after 24h)
+    match /users/{userId}/status/{fileName} {
+      allow read: if isSignedIn();
+      allow create, update: if isVerifiedUser()
+        && isOwner(userId)
+        && fileName.matches('^status_[a-zA-Z0-9_\\-]+\\.(jpg|jpeg|png|webp|mp4|webm|mov)$')
+        && request.resource != null
+        && request.resource.size > 0
+        && request.resource.size <= 25 * 1024 * 1024
+        && (
+          request.resource.contentType.matches('^image/(jpeg|jpg|png|webp)$') ||
+          request.resource.contentType.matches('^video/(mp4|webm|quicktime)$')
+        )
+        && (
+          !('ownerUid' in request.resource.metadata) ||
+          request.resource.metadata.ownerUid == request.auth.uid
+        );
+      allow delete: if isVerifiedUser() && isOwner(userId);
+    }
+
+    // Legacy Status media path (kept for backwards compatibility with existing statuses)
+    match /status_media/{userId}/{fileName} {
+      allow read: if isSignedIn();
+      allow create, update: if isVerifiedUser()
+        && isOwner(userId)
+        && fileName.matches('^status_[a-zA-Z0-9_\\-]+\\.(jpg|jpeg|png|webp|mp4|webm|mov)$')
+        && request.resource != null
+        && request.resource.size > 0
+        && request.resource.size <= 25 * 1024 * 1024
+        && (
+          request.resource.contentType.matches('^image/(jpeg|jpg|png|webp)$') ||
+          request.resource.contentType.matches('^video/(mp4|webm|quicktime)$')
+        )
+        && (
+          !('ownerUid' in request.resource.metadata) ||
+          request.resource.metadata.ownerUid == request.auth.uid
+        );
+      allow delete: if isVerifiedUser() && isOwner(userId);
+    }
+
+    // Chat attachments (videos up to 2 GB / 4h, voice notes, images, and documents scoped by sender UID)
+    match /chat_media/{userId}/{fileName} {
+      allow read: if isSignedIn();
+      allow create, update: if isVerifiedUser()
+        && isOwner(userId)
+        && fileName.matches('^(vid|aud|doc|img)_[a-zA-Z0-9_\\-]+\\.(jpg|jpeg|png|webp|mp4|webm|mov|m4v|3gp|mkv|ogg|mp3|wav|m4a|aac|flac|pdf|doc|docx|xls|xlsx|ppt|pptx|csv|txt|zip)$')
+        && request.resource != null
+        && request.resource.size > 0
+        && (
+          (fileName.matches('^vid_.*') && request.resource.size <= 2147483648) ||
+          request.resource.size <= 25 * 1024 * 1024
+        )
+        && (
+          !('ownerUid' in request.resource.metadata) ||
+          request.resource.metadata.ownerUid == request.auth.uid
+        );
+      allow delete: if isVerifiedUser() && isOwner(userId);
+    }
+
+    // Emergency report photo/video uploads scoped strictly to owner UID
+    match /emergency_media/{userId}/{fileName} {
+      allow read: if isSignedIn();
+      allow create, update: if isVerifiedUser()
+        && isOwner(userId)
+        && fileName.matches('^emg_[a-zA-Z0-9_\\-]+\\.(jpg|jpeg|png|webp|mp4|webm|mov)$')
+        && request.resource != null
+        && request.resource.size > 0
+        && request.resource.size <= 25 * 1024 * 1024
+        && (
+          request.resource.contentType.matches('^image/(jpeg|jpg|png|webp)$') ||
+          request.resource.contentType.matches('^video/(mp4|webm|quicktime)$')
+        )
+        && (
+          !('ownerUid' in request.resource.metadata) ||
+          request.resource.metadata.ownerUid == request.auth.uid
+        );
+      allow delete: if isVerifiedUser() && isOwner(userId);
+    }
+  }
+}

@@ -1,0 +1,30 @@
+name: pk_chat
+description: PK CHAT mobile & web Flutter app wired to Firebase project pk-chhat (database ai-studio-6dbe0703-e82e-426f-99e4-cc1723ffa450).
+publish_to: 'none'
+version: 1.0.0+1
+
+environment:
+  sdk: '>=3.4.0 <4.0.0'
+
+dependencies:
+  flutter:
+    sdk: flutter
+  firebase_core: ^4.0.0
+  firebase_auth: ^6.0.0
+  cloud_firestore: ^6.0.0
+  firebase_messaging: ^16.0.0
+  google_sign_in: ^6.2.1
+  local_auth: ^2.3.0
+  flutter_webrtc: ^1.2.0
+  flutter_callkit_incoming: ^2.0.4+1
+  permission_handler: ^11.3.1
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  flutter_lints: ^5.0.0
+
+flutter:
+  uses-material-design: true
+  assets:
+    - assets/pk_chat_logo.jpeg

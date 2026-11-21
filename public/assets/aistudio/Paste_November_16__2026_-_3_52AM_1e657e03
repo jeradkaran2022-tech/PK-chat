@@ -1,0 +1,653 @@
+<!DOCTYPE html>
+<html lang="ta">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>PK Chat - Global Secure VPN-Free & Disaster AI App</title>
+    <style>
+        * { box-sizing: border-box; margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }
+        body { background: #0b141a; color: #e9edef; display: flex; justify-content: center; align-items: center; height: 100vh; overflow: hidden; }
+        
+        /* Mobile WhatsApp Container - Fully Responsive & Future-Proof */
+        .whatsapp-container {
+            width: 100%; max-width: 390px; height: 100vh; max-height: 844px;
+            background: #111b21; border-radius: 0; overflow: hidden;
+            display: flex; flex-direction: column; position: relative;
+            box-shadow: 0 15px 40px rgba(0,0,0,0.7); border: none;
+        }
+        @media(min-width: 480px) {
+            .whatsapp-container { border-radius: 28px; height: 90vh; border: 6px solid #202c33; }
+        }
+
+        /* WhatsApp Header with Security Badge & SOS Button */
+        .wa-header {
+            background: #202c33; padding: 12px 16px; display: flex; justify-content: space-between; align-items: center; color: #e9edef; flex-shrink: 0;
+        }
+        .wa-header h2 { font-size: 16px; font-weight: 600; display: flex; align-items: center; gap: 6px; }
+        .security-shield-icon { font-size: 12px; color: #00a884; }
+        .header-icons { display: flex; gap: 12px; font-size: 14px; align-items: center; }
+        .sos-btn-header { background: #d32f2f; color: white; border: none; padding: 4px 8px; border-radius: 12px; font-size: 10px; font-weight: bold; cursor: pointer; animation: pulse 1.5s infinite; }
+        @keyframes pulse { 0% { opacity: 1; } 50% { opacity: 0.5; } 100% { opacity: 1; } }
+
+        /* WhatsApp Tabs */
+        .wa-tabs {
+            background: #202c33; display: flex; justify-content: space-around; padding: 0 5px 8px 5px; border-bottom: 1px solid #222d34; flex-shrink: 0;
+        }
+        .wa-tab {
+            color: #8696a0; font-size: 10px; font-weight: 600; cursor: pointer; padding-bottom: 4px; text-transform: uppercase; text-align: center;
+        }
+        .wa-tab.active { color: #00a884; border-bottom: 3px solid #00a884; }
+
+        /* Screen Views */
+        .screen-view { display: none; flex: 1; flex-direction: column; overflow-y: auto; overflow-x: hidden; background: #111b21; padding-bottom: 50px; -webkit-overflow-scrolling: touch; }
+        .screen-view.active { display: flex; }
+
+        /* AI Disaster Early Warning Banner */
+        .disaster-banner {
+            background: linear-gradient(135deg, #b71c1c, #d32f2f); color: white; padding: 10px 14px; margin: 10px;
+            border-radius: 10px; border: 1px solid #ff5252; box-shadow: 0 4px 10px rgba(211,47,47,0.4);
+        }
+        .disaster-banner h4 { font-size: 12px; margin-bottom: 4px; display: flex; align-items: center; gap: 6px; }
+        .disaster-banner p { font-size: 10px; line-height: 1.4; color: #ffcdd2; }
+
+        /* Offline Emergency Directory Box */
+        .emergency-directory {
+            background: #202c33; border-radius: 10px; padding: 12px; margin: 10px; border: 1px solid #374248;
+        }
+        .emergency-directory h4 { font-size: 12px; color: #00a884; margin-bottom: 8px; }
+        .emergency-contact-row { display: flex; justify-content: space-between; font-size: 11px; padding: 4px 0; border-bottom: 1px solid #2a3942; }
+        .emergency-contact-row span:last-child { color: #ffeb3b; font-weight: bold; }
+
+        /* Festival & Special Days Cards Grid */
+        .cards-section-title { font-size: 11px; color: #00a884; font-weight: bold; margin: 10px 12px 6px 12px; text-transform: uppercase; letter-spacing: 0.5px; flex-shrink: 0; }
+        
+        .compact-cards-grid {
+            display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; padding: 0 10px 20px 10px; flex-shrink: 0;
+        }
+
+        .compact-card {
+            background: linear-gradient(135deg, #1f2c34, #2a3942); border-radius: 8px; padding: 10px 4px;
+            text-align: center; cursor: pointer; transition: transform 0.2s, background 0.2s;
+            border: 1px solid #374248; box-shadow: 0 2px 5px rgba(0,0,0,0.3);
+        }
+        .compact-card:hover { transform: scale(1.03); background: #2a3942; }
+        .compact-card .card-icon { font-size: 18px; margin-bottom: 3px; }
+        .compact-card h4 { font-size: 9px; color: #ffeb3b; margin-bottom: 1px; font-weight: 600; line-height: 1.2; }
+
+        /* Chat List Item */
+        .chat-list-item {
+            display: flex; align-items: center; padding: 10px 14px; border-bottom: 1px solid #222d34; cursor: pointer; transition: background 0.2s;
+        }
+        .chat-list-item:hover { background: #202c33; }
+        .chat-avatar { width: 44px; height: 44px; border-radius: 50%; background: #00a884; display: flex; align-items: center; justify-content: center; color: white; font-weight: bold; font-size: 16px; flex-shrink: 0; }
+        .chat-info { flex: 1; margin-left: 10px; overflow: hidden; }
+        .chat-name { font-size: 15px; color: #e9edef; font-weight: 500; }
+        .chat-snippet { font-size: 12px; color: #8696a0; margin-top: 2px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+        .chat-meta { display: flex; flex-direction: column; align-items: flex-end; justify-content: center; gap: 4px; margin-left: 6px; flex-shrink: 0; }
+        .chat-time { font-size: 10px; color: #0084ff; }
+
+        /* Blue Unread Badge */
+        .unread-badge {
+            background-color: #0084ff; color: #ffffff;
+            font-size: 10px; font-weight: 600; height: 18px; min-width: 18px;
+            border-radius: 50%; display: flex; align-items: center; justify-content: center; padding: 0 4px;
+        }
+
+        /* Message Bubbles */
+        .message-bubble {
+            background: #ffffff; padding: 10px 14px; border-radius: 0 10px 10px 10px; max-width: 85%; align-self: flex-start;
+            margin-bottom: 8px; box-shadow: 0 1px 3px rgba(0,0,0,0.2); cursor: pointer; border-left: 4px solid #00a884;
+        }
+        .message-bubble h4 { font-size: 13px; color: #111; margin-bottom: 2px; }
+        .message-bubble p { font-size: 11px; color: #333; }
+
+        /* WhatsApp Chat Input & Attachment Popup */
+        .chat-input-area {
+            background: #202c33; padding: 10px; display: flex; align-items: center; gap: 8px; position: relative; flex-shrink: 0;
+        }
+        .chat-input-box {
+            flex: 1; background: #2a3942; border: none; border-radius: 20px; padding: 10px 14px; color: white; font-size: 13px; outline: none;
+        }
+        .attachment-popup {
+            position: absolute; bottom: 65px; left: 10px; background: #233138; border-radius: 12px;
+            padding: 10px; display: none; flex-direction: column; gap: 8px; border: 1px solid #374248; z-index: 100;
+            box-shadow: 0 10px 25px rgba(0,0,0,0.5); width: 220px;
+        }
+        .attachment-item {
+            display: flex; align-items: center; gap: 10px; color: #e9edef; font-size: 12px; cursor: pointer; padding: 6px; border-radius: 6px;
+        }
+        .attachment-item:hover { background: #2a3942; }
+
+        /* TikTok Beauty & Video Call Screen */
+        .video-call-screen {
+            background: #111b21; flex: 1; display: flex; flex-direction: column; justify-content: space-between; padding: 15px; position: relative;
+        }
+        .video-feed-box {
+            flex: 1; background: #1f2c34; border-radius: 16px; border: 2px solid #00a884; display: flex; flex-direction: column; justify-content: center; align-items: center; position: relative; overflow: hidden; min-height: 250px;
+        }
+        .beauty-filter-badge {
+            position: absolute; top: 10px; right: 10px; background: rgba(0, 168, 132, 0.8); color: white; font-size: 10px; padding: 4px 8px; border-radius: 12px; font-weight: bold;
+        }
+        .beauty-controls {
+            background: rgba(32, 44, 51, 0.9); padding: 10px; border-radius: 10px; margin-top: 10px; display: flex; flex-direction: column; gap: 6px;
+        }
+        .beauty-slider-row { display: flex; justify-content: space-between; align-items: center; font-size: 11px; color: #8696a0; }
+
+        /* Profile & Triple Emergency Contacts Setup */
+        .profile-box { background: #202c33; border-radius: 12px; padding: 15px; margin: 10px; border: 1px solid #374248; }
+        .profile-box h3 { color: #00a884; font-size: 13px; margin-bottom: 8px; }
+        .profile-box label { font-size: 10px; color: #8696a0; display: block; margin-bottom: 3px; }
+        .profile-input, .profile-select { width: 100%; background: #2a3942; color: white; padding: 6px 10px; border-radius: 6px; border: 1px solid #374248; font-size: 11px; margin-bottom: 8px; outline: none; }
+        .save-btn { background: #00a884; color: white; border: none; padding: 6px 12px; border-radius: 6px; font-size: 11px; font-weight: bold; cursor: pointer; width: 100%; }
+
+        /* SOS Popup Modal */
+        #sos-modal {
+            position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(11, 20, 26, 0.95); display: none; justify-content: center; align-items: center;
+            flex-direction: column; z-index: 2000; text-align: center; padding: 20px;
+        }
+        .sos-modal-content { background: #202c33; padding: 20px; border-radius: 16px; border: 2px solid #d32f2f; max-width: 320px; width: 100%; }
+        .sos-option-btn { background: #2a3942; color: white; border: 1px solid #374248; padding: 10px; border-radius: 8px; margin-bottom: 8px; width: 100%; font-size: 12px; font-weight: bold; cursor: pointer; text-align: left; display: flex; align-items: center; gap: 8px; }
+        .sos-option-btn:hover { background: #374248; }
+
+        /* WhatsApp Bottom Navigation Bar */
+        .wa-footer-nav {
+            background: #202c33; display: flex; justify-content: space-around; padding: 8px 0; border-top: 1px solid #222d34; flex-shrink: 0;
+        }
+        .nav-item {
+            display: flex; flex-direction: column; align-items: center; color: #8696a0; font-size: 10px; cursor: pointer; gap: 3px;
+        }
+        .nav-item.active { color: #00a884; }
+        .nav-item span.icon { font-size: 18px; }
+
+        /* Animation Overlay */
+        #animation-overlay {
+            position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(11, 20, 26, 0.96); display: none; justify-content: center; align-items: center;
+            flex-direction: column; z-index: 1000; text-align: center; padding: 20px;
+        }
+        .greeting-popup-content { position: relative; z-index: 10; background: rgba(32, 44, 51, 0.95); padding: 20px; border-radius: 14px; border: 2px solid #00a884; max-width: 300px; width: 100%; }
+        .close-popup-btn { background: #00a884; color: white; border: none; padding: 6px 20px; border-radius: 16px; cursor: pointer; font-size: 12px; font-weight: bold; margin-top: 10px; }
+    </style>
+</head>
+<body>
+
+<div class="whatsapp-container">
+    <!-- Header -->
+    <div class="wa-header">
+        <h2>PK Chat <span class="security-shield-icon">🛡️ VPN-Free & Secure</span></h2>
+        <div class="header-icons">
+            <button class="sos-btn-header" onclick="openSOSModal()">🚨 SOS</button>
+            <span>⋮</span>
+        </div>
+    </div>
+
+    <!-- Tabs -->
+    <div class="wa-tabs" id="wa-tabs-container">
+        <div class="wa-tab active" onclick="switchTab(0)">Chats</div>
+        <div class="wa-tab" onclick="switchTab(1)">Updates</div>
+        <div class="wa-tab" onclick="switchTab(2)">Timer</div>
+        <div class="wa-tab" onclick="switchTab(3)">Calls</div>
+        <div class="wa-tab" onclick="switchTab(4)">Profile</div>
+    </div>
+
+    <!-- 1. Chats & Authentic Cultural Festivals Screen + AI Disaster Early Warning -->
+    <div class="screen-view active" id="screen-chats">
+        <!-- AI Natural Disaster Prediction & Real-time Warning Banner -->
+        <div class="disaster-banner">
+            <h4>⚠️ AI Disaster Early Warning System</h4>
+            <p><b>அறிவிப்பு:</b> உங்கள் தற்போதைய பிராந்தியத்தில் வானிலை மாற்றங்களால் கனமழை மற்றும் வெள்ள அபாயம் கண்டறியப்பட்டுள்ளது. பாதுகாப்பு முக்கியம்! ஆஃப்லைன் அவசர எண்கள் கீழே கொடுக்கப்பட்டுள்ளன.</p>
+        </div>
+
+        <!-- Offline Emergency Directory (Local numbers pre-loaded without internet lookup) -->
+        <div class="emergency-directory">
+            <h4>📍 ஆஃப்லைன் அவசர உதவி எண்கள் (Offline Emergency Directory)</h4>
+            <div class="emergency-contact-row"><span>காவல்துறை (Police / 119)</span><span>119 / 999</span></div>
+            <div class="emergency-contact-row"><span>அவசர ஆம்புலன்ஸ் (Ambulance)</span><span>1990 / 998</span></div>
+            <div class="emergency-contact-row"><span>தீயணைப்புத் துறை (Fire Services)</span><span>110 / 997</span></div>
+            <div class="emergency-contact-row"><span>பெண்கள் உதவி மையம் (Women Helpline)</span><span>1091 / 1292</span></div>
+        </div>
+
+        <div class="cards-section-title">✨ Global Festivals & Authentic Cultural Greetings</div>
+        <div class="compact-cards-grid">
+            <!-- Thai Pongal with Authentic Pot, Sugarcane & Cow Elements -->
+            <div class="compact-card" onclick="sendSecureCard('Thai Pongal 🍲🌾🐄', 'pongal', 'இனிய தை பொங்கல் நல்வாழ்த்துகள்! பொங்கலோ பொங்கல் - உழவர் திருநாள் வாழ்த்துகள்!')">
+                <div class="card-icon">🍲🌾🐄</div>
+                <h4>Thai Pongal</h4>
+            </div>
+            <!-- Diwali -->
+            <div class="compact-card" onclick="sendSecureCard('Diwali 🪔✨', 'diwali', 'இனிய தீபாவளி நல்வாழ்த்துகள்! ஒளிமயமான திருநாள் வாழ்த்துகள்!')">
+                <div class="card-icon">🪔✨</div>
+                <h4>Diwali</h4>
+            </div>
+            <!-- Karthigai Deepam -->
+            <div class="compact-card" onclick="sendSecureCard('Karthigai Deepam 🔥🪔', 'karthigai', 'இனிய கார்த்திகை தீபத் திருநாள் நல்வாழ்த்துகள்!')">
+                <div class="card-icon">🔥🪔</div>
+                <h4>Karthigai Deepam</h4>
+            </div>
+            <!-- Maha Shivaratri -->
+            <div class="compact-card" onclick="sendSecureCard('Maha Shivaratri 🔱🕉️', 'shiva', 'இனிய மகா சிவராத்திரி நல்வாழ்த்துகள்!')">
+                <div class="card-icon">🔱🕉️</div>
+                <h4>Shivaratri</h4>
+            </div>
+            <!-- Vinayagar Chaturthi -->
+            <div class="compact-card" onclick="sendSecureCard('Vinayagar Chaturthi 🐘🥥', 'vinayagar', 'இனிய விநாயகர் சதுர்த்தி நல்வாழ்த்துகள்!')">
+                <div class="card-icon">🐘🥥</div>
+                <h4>Vinayagar</h4>
+            </div>
+            
+            <!-- Muslim Festivals: Nonbu Perunal -->
+            <div class="compact-card" onclick="sendSecureCard('Nonbu Perunal 🌙⭐🕌', 'eid', 'இனிய நோன்பு பெருநாள் (ஈகை திருநாள்) நல்வாழ்த்துகள்!')">
+                <div class="card-icon">🌙⭐🕌</div>
+                <h4>Nonbu Perunal</h4>
+            </div>
+            <!-- Bakrid -->
+            <div class="compact-card" onclick="sendSecureCard('Bakrid / Eid al-Adha 🕋✨', 'bakrid', 'இனிய பக்ரீத் பெருநாள் நல்வாழ்த்துகள்!')">
+                <div class="card-icon">🕋✨</div>
+                <h4>Bakrid</h4>
+            </div>
+
+            <!-- Christian Festivals: Christmas -->
+            <div class="compact-card" onclick="sendSecureCard('Christmas 🎄⭐🎁', 'christmas', 'இனிய கிறிஸ்மஸ் நல்வாழ்த்துகள்!')">
+                <div class="card-icon">🎄⭐🎁</div>
+                <h4>Christmas</h4>
+            </div>
+            <!-- Easter Sunday -->
+            <div class="compact-card" onclick="sendSecureCard('Easter Sunday 🕊️⛪', 'easter', 'இனிய ஈஸ்டர் திருநாள் நல்வாழ்த்துகள்!')">
+                <div class="card-icon">🕊️⛪</div>
+                <h4>Easter Sunday</h4>
+            </div>
+            <!-- Good Friday -->
+            <div class="compact-card" onclick="sendSecureCard('Good Friday ✝️🌿', 'goodfriday', 'அமைதியான குட் ஃபிரைடே நல்வாழ்த்துகள்!')">
+                <div class="card-icon">✝️🌿</div>
+                <h4>Good Friday</h4>
+            </div>
+
+            <!-- Buddhist & Local Cultural Festivals -->
+            <div class="compact-card" onclick="sendSecureCard('Sinhala & Tamil New Year ☀️🥥🌺', 'suthanthiram', 'இனிய சிங்கள மற்றும் தமிழ் புத்தாண்டு நல்வாழ்த்துகள்!')">
+                <div class="card-icon">☀️🥥🌺</div>
+                <h4>New Year (Local)</h4>
+            </div>
+            <!-- Vesak Poya -->
+            <div class="compact-card" onclick="sendSecureCard('Vesak Poya 🪷🕯️', 'vesak', 'அமைதியான வெசாக் பொங்கல் நல்வாழ்த்துகள்!')">
+                <div class="card-icon">🪷🕯️</div>
+                <h4>Vesak Poya</h4>
+            </div>
+
+            <!-- Special Days & Authentic Taj Mahal -->
+            <div class="compact-card" onclick="sendSecureCard('Mothers Day 👩‍👧‍👦❤️', 'mother', 'அன்பான அம்மாவுக்கு இனிய அன்னையர் தின நல்வாழ்த்துகள்!')">
+                <div class="card-icon">👩‍👧‍👦❤️</div>
+                <h4>Mothers Day</h4>
+            </div>
+            <div class="compact-card" onclick="sendSecureCard('Fathers Day 👨‍👧‍👦💙', 'father', 'அன்பான அப்பாவிற்கு இனிய தந்தைமார் தின நல்வாழ்த்துகள்!')">
+                <div class="card-icon">👨‍👧‍👦💙</div>
+                <h4>Fathers Day</h4>
+            </div>
+            <div class="compact-card" onclick="sendSecureCard('Valentines Day ❤️🌹', 'love', 'என் அன்பிற்குரியவருக்கு இனிய காதலர் தின நல்வாழ்த்துகள்!')">
+                <div class="card-icon">❤️🌹</div>
+                <h4>Valentines Day</h4>
+            </div>
+            <div class="compact-card" onclick="sendSecureCard('Friendship Day 🤝✨', 'friend', 'என் இனிய நண்பருக்கு இனிய நண்பர்கள் தின நல்வாழ்த்துகள்!')">
+                <div class="card-icon">🤝✨</div>
+                <h4>Friendship Day</h4>
+            </div>
+            <!-- Authentic Taj Mahal with Domes & Minarets -->
+            <div class="compact-card" onclick="sendSecureCard('Taj Mahal 🕌❤️🏛️', 'taj', 'அன்பின் நித்திய சின்னமான தாஜ்மஹால் நினைவுச் செய்தி!')">
+                <div class="card-icon">🕌❤️🏛️</div>
+                <h4>Taj Mahal</h4>
+            </div>
+            <div class="compact-card" onclick="sendSecureCard('Birthday 🎂🎈', 'birthday', 'இனிய பிறந்தநாள் நல்வாழ்த்துகள்!')">
+                <div class="card-icon">🎂🎈</div>
+                <h4>Birthday</h4>
+            </div>
+            <div class="compact-card" onclick="sendSecureCard('Global New Year 🎆🥂', 'fireworks', 'இனிய ஆங்கிலப் புத்தாண்டு நல்வாழ்த்துகள்!')">
+                <div class="card-icon">🎆🥂</div>
+                <h4>Global New Year</h4>
+            </div>
+        </div>
+
+        <div style="padding: 5px 12px; font-size: 11px; color: #8696a0; font-weight: bold;">Recent Chats (VPN-Free Secure Tunnel)</div>
+        <div class="chat-list-item" onclick="openChatRoom()">
+            <div class="chat-avatar">JK</div>
+            <div class="chat-info">
+                <div class="chat-name">Jerad Karan</div>
+                <div class="chat-snippet" id="last-snippet">Tap to open chat & send secure location</div>
+            </div>
+            <div class="chat-meta">
+                <span class="chat-time" style="color: #0084ff;">12:00 AM</span>
+                <div class="unread-badge" id="unread-count">1</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 2. Updates Screen -->
+    <div class="screen-view" id="screen-updates">
+        <div style="padding: 15px;">
+            <h3 style="font-size: 14px; color: #00a884; margin-bottom: 10px;">📢 Status Updates & Stories</h3>
+            <p style="font-size: 11px; color: #8696a0;">வாட்ஸ்அப் போன்ற ஸ்டேட்டஸ் பகிர்வு மற்றும் எண்ட்-டூ-எண்ட் என்கிரிப்ஷன் பாதுகாப்பு.</p>
+        </div>
+    </div>
+
+    <!-- 3. Timer Screen -->
+    <div class="screen-view" id="screen-timer">
+        <div style="padding: 15px;">
+            <h3 style="font-size: 14px; color: #00a884; margin-bottom: 10px;">⏰ AI Automated Festival Greeting Broadcast</h3>
+            <p style="font-size: 11px; color: #8696a0; line-height: 1.4;">பயனரின் மதம் மற்றும் பிராந்தியத்திற்கு ஏற்ப, பண்டிகை நாட்களில் AI தானியங்கியாக வாழ்த்துகளை அனுப்பும் முறை மற்றும் நள்ளிரவு உலகளாவிய புத்தாண்டு வாழ்த்து அமைப்பு.</p>
+        </div>
+    </div>
+
+    <!-- 4. Calls & TikTok Beauty Video Call Screen -->
+    <div class="screen-view" id="screen-calls">
+        <div class="video-call-screen">
+            <div style="font-size: 12px; color: #00a884; font-weight: bold; margin-bottom: 6px;">📞 WhatsApp-Style Video Call with TikTok Beauty</div>
+            <div class="video-feed-box">
+                <div class="beauty-filter-badge">✨ TikTok Glamour Filter Active</div>
+                <div style="font-size: 40px; margin-bottom: 10px;">😊</div>
+                <div style="font-size: 13px; color: #e9edef; font-weight: 500;">Prasanth Remo (HD Call)</div>
+                <div style="font-size: 10px; color: #8696a0; margin-top: 4px;">Voice Translation: Tamil ⇄ English</div>
+            </div>
+
+            <div class="beauty-controls">
+                <div class="beauty-slider-row">
+                    <span>✨ Skin Smoothing</span>
+                    <input type="range" min="0" max="100" value="85" style="width: 120px; accent-color: #00a884;">
+                </div>
+                <div class="beauty-slider-row">
+                    <span>🌸 Face Slimming / Glow</span>
+                    <input type="range" min="0" max="100" value="90" style="width: 120px; accent-color: #00a884;">
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 5. Profile & Triple Emergency Contacts Setup with PK Chat Validation -->
+    <div class="screen-view" id="screen-profile">
+        <div class="profile-box">
+            <h3>🛡️ Religion & Culture Auto-Greeting Setup</h3>
+            <label>Select Your Religion / Culture:</label>
+            <select class="profile-select" id="user-religion" onchange="updateUserReligion()">
+                <option value="all">All Religions & Cultures (Universal)</option>
+                <option value="hindu">Hindu (பொங்கல், தீபாவளி, கார்த்திகை, சிவராத்திரி, விநாயகர்)</option>
+                <option value="islam">Islam (நோன்பு பெருநாள், பக்ரீத்)</option>
+                <option value="christian">Christian (Christmas, Easter, Good Friday)</option>
+                <option value="buddhist">Buddhist (Vesak Poya)</option>
+                <option value="local">Sinhala & Tamil Cultural</option>
+            </select>
+        </div>
+
+        <div class="profile-box">
+            <h3>🚨 3 அவசரத் தொடர்புகள் அமைப்பு (Triple Emergency Contacts & Cascade)</h3>
+            <p style="font-size: 9px; color: #8696a0; margin-bottom: 8px;">நீங்கள் கொடுக்கும் 3 எண்களும் PK Chat செயலியைப் பயன்படுத்துபவராக இருக்க வேண்டும். ஆப் தானியங்கி முறையில் சரிபார்த்து அனுமதியைப் பெறும். ஆஃப்லைன் மற்றும் சங்கிலித் தொடர் பாதுகாப்புடன் இணைக்கப்பட்டுள்ளது.</p>
+            
+            <label>Emergency Contact 1 (Name & Phone):</label>
+            <input type="text" class="profile-input" id="ec-1" placeholder="e.g., Kumar - +94771234567">
+            
+            <label>Emergency Contact 2 (Name & Phone):</label>
+            <input type="text" class="profile-input" id="ec-2" placeholder="e.g., Priya - +94772345678">
+            
+            <label>Emergency Contact 3 (Name & Phone):</label>
+            <input type="text" class="profile-input" id="ec-3" placeholder="e.g., Ramesh - +94773456789">
+
+            <button class="save-btn" onclick="verifyAndSaveEmergencyContacts()">சரிபார்த்துச் சேமி (Verify & Save)</button>
+        </div>
+    </div>
+
+    <!-- Active WhatsApp Chat Room View with Attachment Location Menu -->
+    <div class="screen-view" id="chat-room-view" style="background-image: radial-gradient(#d1d7db 1px, transparent 1px); background-size: 20px 20px; display: flex; flex-direction: column;">
+        <div style="background:#202c33; color:white; padding:10px 14px; display:flex; align-items:center; gap:10px; flex-shrink:0;">
+            <span style="cursor:pointer; font-size:16px;" onclick="backToChats()">⬅</span>
+            <div style="font-size:14px; font-weight:500;">Jerad Karan (Secured)</div>
+        </div>
+        
+        <div id="messages-container" style="flex: 1; padding: 12px; overflow-y: auto; display: flex; flex-direction: column; gap: 8px;">
+            <!-- Messages -->
+        </div>
+
+        <!-- WhatsApp Attachment & Chat Input -->
+        <div class="chat-input-area">
+            <!-- Attachment Popup Menu -->
+            <div class="attachment-popup" id="attachment-menu">
+                <div class="attachment-item" onclick="sendLocationFromChat('📍 Current Location')">
+                    <span>📍</span> <span>Current Location</span>
+                </div>
+                <div class="attachment-item" onclick="sendLocationFromChat('🔴 Live Location (Waze Nav)')">
+                    <span>🔴</span> <span>Live Location</span>
+                </div>
+                <div class="attachment-item" onclick="alert('Document attached & scanned safely')">
+                    <span>📄</span> <span>Document (Anti-Virus Scanned)</span>
+                </div>
+                <div class="attachment-item" onclick="alert('Gallery photo attached securely')">
+                    <span>🖼️</span> <span>Photos & Gallery</span>
+                </div>
+            </div>
+
+            <span style="font-size: 20px; cursor: pointer; color: #8696a0;" onclick="toggleAttachmentMenu()">📎</span>
+            <input type="text" id="chat-msg-input" class="chat-input-box" placeholder="Type a secure message...">
+            <span style="font-size: 18px; cursor: pointer; color: #00a884;" onclick="sendSanitizedMessage()">➤</span>
+        </div>
+    </div>
+
+    <!-- SOS Popup Modal with Category Selection & Women Safety Shield -->
+    <div id="sos-modal">
+        <div class="sos-modal-content">
+            <h2 style="color: #ff5252; font-size: 16px; margin-bottom: 6px;">🚨 அவசர கால உதவி (SOS)</h2>
+            <p style="font-size: 10px; color: #e9edef; margin-bottom: 12px;">உங்களுக்குத் தேவையான உதவியைத் தேர்ந்தெடுக்கவும். உங்கள் 3 நம்பர்களுக்கு 5 மணி நேர நேரலை ஜிபிஎஸ் லொகேஷன் அனுப்பப்படும்.</p>
+            
+            <button class="sos-option-btn" onclick="triggerSOS('Police Alert (119)')">👮‍♂️ காவல்துறை உதவி (Police)</button>
+            <button class="sos-option-btn" onclick="triggerSOS('Ambulance / Medical')">🚑 மருத்துவமனை / ஆம்புலன்ஸ் (Hospital)</button>
+            <button class="sos-option-btn" onclick="triggerSOS('Fire Services')">🚒 தீயணைப்புத் துறை (Fire Service)</button>
+            <button class="sos-option-btn" onclick="triggerSOS('Women Safety Shield (Violence/Harassment)')" style="border-color: #ff4081; color: #ff80ab;">🛡️ பெண்கள் பாதுகாப்புப் பிரிவு (Women Safety)</button>
+            
+            <button class="close-popup-btn" style="background: #374248; width: 100%; margin-top: 6px;" onclick="closeSOSModal()">ரத்து செய் (Cancel)</button>
+        </div>
+    </div>
+
+    <!-- WhatsApp Bottom Navigation Bar -->
+    <div class="wa-footer-nav" id="wa-footer-nav">
+        <div class="nav-item active" onclick="switchNav(0)">
+            <span class="icon">💬</span>
+            <span>Chats</span>
+        </div>
+        <div class="nav-item" onclick="switchNav(1)">
+            <span class="icon">📢</span>
+            <span>Updates</span>
+        </div>
+        <div class="nav-item" onclick="switchNav(2)">
+            <span class="icon">⏰</span>
+            <span>Timer</span>
+        </div>
+        <div class="nav-item" onclick="switchNav(3)">
+            <span class="icon">📞</span>
+            <span>Calls</span>
+        </div>
+        <div class="nav-item" onclick="switchNav(4)">
+            <span class="icon">👤</span>
+            <span>Profile</span>
+        </div>
+    </div>
+
+    <!-- Animation Overlay -->
+    <div id="animation-overlay">
+        <canvas id="animation-canvas"></canvas>
+        <div class="greeting-popup-content">
+            <div id="popup-graphic" style="font-size: 40px; margin-bottom: 8px;">🎉</div>
+            <h2 id="popup-title" style="color: #ffeb3b; font-size: 18px; margin-bottom: 6px;">வாழ்த்துகள்!</h2>
+            <p id="popup-desc" style="font-size: 11px; color: #e9edef; margin-bottom: 12px;"></p>
+            <button class="close-popup-btn" onclick="closeAnimation()">மூடு (Close)</button>
+        </div>
+    </div>
+</div>
+
+<script>
+    function switchTab(index) {
+        const tabs = document.querySelectorAll('.wa-tab');
+        tabs.forEach((t, i) => {
+            if(i === index) t.classList.add('active');
+            else t.classList.remove('active');
+        });
+        switchNav(index);
+    }
+
+    function switchNav(index) {
+        const navItems = document.querySelectorAll('.nav-item');
+        const screens = [
+            document.getElementById('screen-chats'),
+            document.getElementById('screen-updates'),
+            document.getElementById('screen-timer'),
+            document.getElementById('screen-calls'),
+            document.getElementById('screen-profile')
+        ];
+        
+        navItems.forEach((n, i) => {
+            if(i === index) n.classList.add('active');
+            else n.classList.remove('active');
+        });
+
+        screens.forEach((s, i) => {
+            if(s) {
+                if(i === index) s.classList.add('active');
+                else s.classList.remove('active');
+            }
+        });
+    }
+
+    let chatMessages = [
+        { id: 1, title: 'Thai Pongal 🍲🌾🐄', type: 'pongal', desc: 'இனிய தை பொங்கல் நல்வாழ்த்துகள்! பொங்கலோ பொங்கல் - உழவர் திருநாள் வாழ்த்துகள்!', isOpened: false }
+    ];
+
+    function sendSecureCard(title, type, desc) {
+        const newMsg = { id: Date.now(), title, type, desc, isOpened: false };
+        chatMessages.push(newMsg);
+        document.getElementById('last-snippet').innerText = title;
+        document.getElementById('unread-count').innerText = chatMessages.filter(m => !m.isOpened).length;
+        alert("✔ " + title + " encrypted & sent securely through VPN-Free global tunnel!");
+    }
+
+    function openChatRoom() {
+        document.getElementById('screen-chats').classList.remove('active');
+        document.getElementById('wa-tabs-container').style.display = 'none';
+        document.getElementById('wa-footer-nav').style.display = 'none';
+        
+        const roomView = document.getElementById('chat-room-view');
+        roomView.style.display = 'flex';
+        roomView.classList.add('active');
+        document.getElementById('app-title').innerText = "Active Chat (Secured)";
+
+        renderMessages();
+        document.getElementById('unread-count').innerText = "0";
+    }
+
+    function sanitizeInput(str) {
+        const temp = document.createElement('div');
+        temp.textContent = str;
+        return temp.innerHTML;
+    }
+
+    function sendSanitizedMessage() {
+        const input = document.getElementById('chat-msg-input');
+        const rawText = input.value.trim();
+        if(!rawText) return;
+
+        if(rawText.toLowerCase().includes('script') || rawText.toLowerCase().includes('malware') || rawText.includes('<iframe')) {
+            alert("🛡️ Cyber Shield Alert: Malicious payload neutralized!");
+            input.value = '';
+            return;
+        }
+
+        const safeText = sanitizeInput(rawText);
+        chatMessages.push({ id: Date.now(), title: 'Secure Message 🔒', type: 'text', desc: safeText, isOpened: true });
+        input.value = '';
+        renderMessages();
+        alert("✔ Encrypted message sent successfully without VPN!");
+    }
+
+    function renderMessages() {
+        const container = document.getElementById('messages-container');
+        container.innerHTML = '';
+
+        chatMessages.forEach((msg) => {
+            const bubble = document.createElement('div');
+            bubble.className = 'message-bubble';
+            bubble.innerHTML = `
+                <h4>${msg.title}</h4>
+                <p>${msg.desc}</p>
+                <span style="font-size: 9px; color: #008069; display: block; margin-top: 4px;">🛡️ End-to-End Encrypted • ${msg.isOpened ? '✓✓ Viewed' : 'Tap to Open'}</span>
+            `;
+            
+            bubble.onclick = () => {
+                if (!msg.isOpened) {
+                    msg.isOpened = true;
+                    triggerRainAnimation(msg.title, msg.type, msg.desc);
+                    renderMessages();
+                } else {
+                    alert("Secure message already decrypted & viewed.");
+                }
+            };
+            container.appendChild(bubble);
+        });
+    }
+
+    function backToChats() {
+        document.getElementById('chat-room-view').classList.remove('active');
+        document.getElementById('chat-room-view').style.display = 'none';
+        document.getElementById('screen-chats').classList.add('active');
+        document.getElementById('wa-tabs-container').style.display = 'flex';
+        document.getElementById('wa-footer-nav').style.display = 'flex';
+        closeAnimation();
+    }
+
+    function triggerRainAnimation(title, type, desc) {
+        const overlay = document.getElementById('animation-overlay');
+        document.getElementById('popup-title').innerText = title;
+        document.getElementById('popup-desc').innerText = desc;
+        overlay.style.display = 'flex';
+    }
+
+    function closeAnimation() {
+        document.getElementById('animation-overlay').style.display = 'none';
+    }
+
+    function toggleAttachmentMenu() {
+        const menu = document.getElementById('attachment-menu');
+        menu.style.display = menu.style.display === 'flex' ? 'none' : 'flex';
+    }
+
+    function sendLocationFromChat(locType) {
+        alert("✔ " + locType + " shared securely via encrypted GPS tunnel!");
+        document.getElementById('attachment-menu').style.display = 'none';
+    }
+
+    function updateUserReligion() {
+        const selectedReligion = document.getElementById('user-religion').value;
+        alert("✔ Religion preference updated to: " + selectedReligion.toUpperCase() + ". AI Auto-Greetings configured!");
+    }
+
+    // SOS Modal Functions
+    function openSOSModal() {
+        document.getElementById('sos-modal').style.display = 'flex';
+    }
+
+    function closeSOSModal() {
+        document.getElementById('sos-modal').style.display = 'none';
+    }
+
+    function verifyAndSaveEmergencyContacts() {
+        const c1 = document.getElementById('ec-1').value.trim();
+        const c2 = document.getElementById('ec-2').value.trim();
+        const c3 = document.getElementById('ec-3').value.trim();
+
+        if(!c1 || !c2 || !c3) {
+            alert("⚠️ தயவுசெய்து 3 அவசரத் தொடர்புகளின் பெயரையும் தொலைபேசி எண்களையும் உள்ளிடவும்!");
+            return;
+        }
+
+        // Simulated PK Chat User Validation & Permission Request
+        alert("🔍 PK Chat Server Verification: Checking if numbers are registered PK Chat users...\n\n✔ All 3 contacts verified as active PK Chat users!\n✔ Permission accepted and linked successfully with Cascade Fail-safe & Offline SMS backup protection.");
+    }
+
+    function triggerSOS(emergencyType) {
+        closeSOSModal();
+        alert("🚨 SOS ALERT ACTIVATED: " + emergencyType + "\n\n📍 5-Hour Live GPS Tracking initiated.\n🔄 Checking status of 3 Emergency Contacts...\n⚠️ Primary contacts offline? Cascade system automatically forwarding alert to secondary backup contacts with offline SMS fallback & Siren!");
+    }
+</script>
+</html>

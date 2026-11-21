@@ -1,0 +1,6 @@
+{
+  "name": "PK CHAT",
+  "description": "PK CHAT — One World, One Chat. Secure 24/7 cloud-based global messaging with independent per-user language translation, WebRTC calls, SOS alerts, and official disaster feeds.",
+  "requestFramePermissions": ["camera", "microphone", "geolocation"],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

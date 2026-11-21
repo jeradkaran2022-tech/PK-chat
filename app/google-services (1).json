@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "970080253597",
+    "project_id": "pkchat-41ef3",
+    "storage_bucket": "pkchat-41ef3.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:970080253597:android:a1ae34148e888387bcc674",
+        "android_client_info": {
+          "package_name": "com.pkchat.app"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyAsAiphFy_DU7GHPaWeyecK3WvrAkVE0MM"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

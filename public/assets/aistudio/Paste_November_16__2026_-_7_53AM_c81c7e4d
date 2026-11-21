@@ -1,0 +1,488 @@
+<!DOCTYPE html>
+<html lang="ta">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>PK CHAT - Official Secure Messenger</title>
+    <style>
+        :root {
+            --primary-blue: #0284c7;
+            --light-blue: #e0f2fe;
+            --dark-blue: #0369a1;
+            --bg-color: #f8fafc;
+            --text-color: #0f172a;
+            --white: #ffffff;
+            --gray: #64748b;
+            --green: #16a34a;
+            --red: #dc2626;
+        }
+        * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
+        body { background-color: var(--bg-color); color: var(--text-color); display: flex; justify-content: center; align-items: center; min-height: 100vh; }
+        .app-container { width: 100%; max-width: 480px; height: 100vh; max-height: 900px; background: var(--white); display: flex; flex-direction: column; box-shadow: 0 10px 25px rgba(0,0,0,0.1); border-radius: 12px; overflow: hidden; position: relative; }
+        @media (min-width: 481px) { .app-container { height: 850px; } }
+        
+        /* Auth & Registration Screen */
+        .auth-screen { position: absolute; top: 0; left: 0; width: 100%; height: 100%; background: var(--white); z-index: 30; display: flex; flex-direction: column; justify-content: center; padding: 24px; overflow-y: auto; }
+        .auth-title { font-size: 22px; font-weight: bold; color: var(--primary-blue); margin-bottom: 6px; text-align: center; }
+        .auth-subtitle { font-size: 13px; color: var(--gray); text-align: center; margin-bottom: 20px; }
+        .input-group { margin-bottom: 14px; }
+        .input-group label { display: block; font-size: 12px; font-weight: 600; margin-bottom: 4px; color: var(--dark-blue); }
+        .input-group input, .input-group select { width: 100%; padding: 10px; border-radius: 8px; border: 1px solid #cbd5e1; font-size: 14px; background: #f8fafc; color: var(--text-color); }
+        .auth-btn { background: var(--primary-blue); color: var(--white); border: none; width: 100%; padding: 12px; border-radius: 8px; font-weight: bold; font-size: 15px; cursor: pointer; margin-top: 10px; box-shadow: 0 4px 10px rgba(2, 132, 199, 0.3); }
+
+        /* Call Screen Overlay (WhatsApp Style) */
+        #callScreen { position: absolute; top: 0; left: 0; width: 100%; height: 100%; background: linear-gradient(135deg, #0f172a, #0369a1); z-index: 40; display: none; flex-direction: column; justify-content: space-between; align-items: center; padding: 40px 20px; color: var(--white); text-align: center; }
+        .call-avatar-lg { width: 100px; height: 100px; background: rgba(255,255,255,0.2); border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 32px; font-weight: bold; margin-top: 40px; box-shadow: 0 0 20px rgba(255,255,255,0.3); }
+        .end-call-btn { background: var(--red); color: var(--white); border: none; width: 70px; height: 70px; border-radius: 50%; font-size: 24px; cursor: pointer; display: flex; align-items: center; justify-content: center; box-shadow: 0 4px 15px rgba(220, 38, 38, 0.5); margin-bottom: 30px; }
+
+        /* Main App Screen */
+        .main-screen { display: none; flex-direction: column; height: 100%; }
+        .app-header { background: var(--primary-blue); color: var(--white); padding: 16px; display: flex; justify-content: space-between; align-items: center; }
+        .app-title { font-size: 20px; font-weight: bold; display: flex; align-items: center; gap: 8px; }
+        .badge { background: rgba(255,255,255,0.2); font-size: 11px; padding: 2px 8px; border-radius: 10px; }
+        
+        /* Navigation Tabs */
+        .nav-tabs { display: flex; background: var(--primary-blue); color: rgba(255,255,255,0.7); font-weight: 600; justify-content: space-around; padding-bottom: 8px; }
+        .nav-tab { padding: 8px 12px; cursor: pointer; border-bottom: 3px solid transparent; font-size: 14px; }
+        .nav-tab.active { color: var(--white); border-bottom-color: var(--white); }
+
+        /* Content Area & Tabs */
+        .content-area { flex: 1; overflow-y: auto; padding: 16px; background: var(--light-blue); }
+        .tab-content { display: none; }
+        .tab-content.active { display: block; }
+
+        /* Chat Item with Authentic WhatsApp Last Seen */
+        .chat-item { background: var(--white); padding: 12px; border-radius: 10px; display: flex; align-items: center; gap: 12px; margin-bottom: 10px; box-shadow: 0 2px 5px rgba(0,0,0,0.03); }
+        .chat-avatar { width: 45px; height: 45px; background: var(--primary-blue); color: var(--white); border-radius: 50%; display: flex; align-items: center; justify-content: center; font-weight: bold; }
+        .chat-info h5 { font-size: 15px; color: var(--text-color); }
+        .chat-info p { font-size: 12px; color: var(--gray); margin-top: 2px; }
+        .last-seen-online { font-size: 11px; color: var(--green); font-weight: 600; }
+        .last-seen-time { font-size: 11px; color: var(--gray); }
+
+        /* Calling Section Styles */
+        .dial-pad { background: var(--white); padding: 16px; border-radius: 10px; text-align: center; box-shadow: 0 2px 5px rgba(0,0,0,0.05); margin-bottom: 16px; }
+        .dial-input { width: 100%; padding: 12px; font-size: 18px; text-align: center; border: 1px solid #cbd5e1; border-radius: 8px; margin-bottom: 12px; background: #f8fafc; }
+        .dial-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin-bottom: 12px; }
+        .dial-btn { padding: 12px; font-size: 18px; font-weight: bold; background: var(--light-blue); border: none; border-radius: 8px; cursor: pointer; color: var(--dark-blue); }
+        .dial-btn:hover { background: #bae6fd; }
+        .call-action-btns { display: flex; gap: 10px; }
+        .call-btn { flex: 1; padding: 12px; border: none; border-radius: 8px; font-weight: bold; color: var(--white); cursor: pointer; font-size: 14px; }
+        .audio-call { background: var(--green); }
+        .video-call { background: var(--primary-blue); }
+
+        /* SOS Button */
+        .sos-btn { background: #dc2626; color: var(--white); border: none; width: 100%; padding: 12px; border-radius: 8px; font-weight: bold; font-size: 15px; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 8px; margin-bottom: 16px; box-shadow: 0 4px 10px rgba(220, 38, 38, 0.3); }
+        
+        /* Footer Menu */
+        .footer-menu { display: flex; justify-content: space-around; background: var(--white); padding: 12px; border-top: 1px solid #cbd5e1; }
+        .menu-item { display: flex; flex-direction: column; align-items: center; font-size: 12px; color: var(--gray); cursor: pointer; }
+        .menu-item.active { color: var(--primary-blue); }
+    </style>
+</head>
+<body>
+
+    <div class="app-container">
+        
+        <!-- 1. Mandatory Authentication & Registration Screen -->
+        <div id="authScreen" class="auth-screen">
+            <div class="auth-title">🛡️ PK Chat Registration</div>
+            <div class="auth-subtitle">உள்ளே செல்ல ஜிமெயில், தொலைபேசி, பிறந்த தேதி மற்றும் மதத்தைத் தேர்ந்தெடுக்கவும்</div>
+            
+            <div class="input-group">
+                <label>ஜிமெயில் முகவரி (Gmail Account):</label>
+                <input type="email" id="userGmail" placeholder="example@gmail.com" required>
+            </div>
+
+            <div class="input-group">
+                <label>தொலைபேசி இலக்கம் (Phone Number):</label>
+                <input type="tel" id="userPhone" placeholder="+94 77..." required>
+            </div>
+
+            <div class="input-group">
+                <label>பிறந்த தேதி மற்றும் ஆண்டு (Date of Birth):</label>
+                <input type="date" id="userDob" required>
+            </div>
+
+            <div class="input-group">
+                <label>மதம் / கலாச்சாரம் (Religion & Culture):</label>
+                <select id="userReligion" required>
+                    <option value="">-- மதத்தைத் தேர்ந்தெடுக்கவும் --</option>
+                    <option value="hindu">இந்து சமயம் (Hindu)</option>
+                    <option value="christian">கிறிஸ்தவ சமயம் (Christian)</option>
+                    <option value="muslim">இஸ்லாமிய சமயம் (Islam)</option>
+                    <option value="buddhist">பௌத்த சமயம் (Buddhist)</option>
+                    <option value="all">பொதுவானது / அனைத்து மதங்களும் (Universal)</option>
+                </select>
+            </div>
+
+            <button class="auth-btn" onclick="validateAndRegister()">பதிவு செய்து உள்ளே செல் (Verify & Enter)</button>
+        </div>
+
+        <!-- 2. WhatsApp Style Live Call Screen Overlay -->
+        <div id="callScreen">
+            <div>
+                <p id="callTypeLabel" style="font-size: 14px; letter-spacing: 1px; opacity: 0.8; margin-top: 20px;">PK CHAT AUDIO CALL</p>
+                <h2 id="callNumberDisplay" style="font-size: 24px; margin-top: 5px;">+94 77 123 4567</h2>
+            </div>
+            <div class="call-avatar-lg" id="callAvatarInitial">PK</div>
+            <div>
+                <p id="callStatusText" style="font-size: 18px; color: #38bdf8; font-weight: 500;">Ringing...</p>
+                <p id="callTimer" style="font-size: 14px; color: #cbd5e1; margin-top: 5px; display: none;">00:00</p>
+            </div>
+            <button class="end-call-btn" onclick="endCall()" title="End Call">📞</button>
+        </div>
+
+        <!-- 3. Main Application Screen -->
+        <div id="mainScreen" class="main-screen">
+            <!-- Header -->
+            <div class="app-header">
+                <div class="app-title">
+                    PK Chat <span class="badge">🛡️✓ Official</span>
+                </div>
+                <div>🔍 📎 ⠇</div>
+            </div>
+
+            <!-- Navigation Tabs -->
+            <div class="nav-tabs">
+                <div class="nav-tab active" onclick="switchTab('chats')">Chats</div>
+                <div class="nav-tab" onclick="switchTab('updates')">Updates</div>
+                <div class="nav-tab" onclick="switchTab('calls')">Calls & Dial</div>
+                <div class="nav-tab" onclick="switchTab('profile')">Profile</div>
+            </div>
+
+            <!-- Content Area -->
+            <div class="content-area">
+                
+                <!-- Birthday Greeting Banner -->
+                <div id="birthdayGreetingBanner" style="display: none; background: linear-gradient(135deg, #ec4899, #db2777); color: var(--white); padding: 16px; border-radius: 10px; margin-bottom: 16px; box-shadow: 0 4px 10px rgba(236, 72, 153, 0.3);">
+                    <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 8px;">
+                        <span style="font-size: 18px;">🥳🎂</span>
+                        <h4 style="font-size: 16px; font-weight: bold;">Happy Birthday!</h4>
+                    </div>
+                    <p style="font-size: 14px; line-height: 1.4;">
+                        🎉 இனிய பிறந்தநாள் நல்வாழ்த்துகள்! பிகே சட் (PK Chat) குடும்பத்தின் சார்பாக உங்களுக்கு மனமார்ந்த பிறந்தநாள் வாழ்த்துகளைத் தெரிவித்துக் கொள்கிறோம்!
+                    </p>
+                </div>
+
+                <!-- TAB 1: CHATS (With Authentic WhatsApp Last Seen) -->
+                <div id="tab-chats" class="tab-content active">
+                    <button class="sos-btn" onclick="triggerSOS()">
+                        🚨 SOS அவசரம் (5-Hour GPS Alert)
+                    </button>
+
+                    <!-- PK Chat Official Broadcast Hub -->
+                    <div style="background: linear-gradient(135deg, #0284c7, #0369a1); color: var(--white); padding: 16px; border-radius: 10px; margin-bottom: 16px; box-shadow: 0 4px 10px rgba(2, 132, 199, 0.3);">
+                        <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 8px;">
+                            <span style="font-size: 18px;">🛡️📢</span>
+                            <h4 style="font-size: 16px; font-weight: bold;">PK Chat Official Broadcast</h4>
+                        </div>
+                        <p style="font-size: 13px; opacity: 0.9; margin-bottom: 12px;">பிகே சட் தரப்பிலிருந்து உங்களது மதத்திற்குரிய சிறப்பு வாழ்த்துகள்:</p>
+                        <div id="officialMessageCard" style="background: rgba(255, 255, 255, 0.15); padding: 12px; border-radius: 8px; font-size: 14px; line-height: 1.4;">
+                            🎉 அனைத்து பிகே சட் பயனர்களுக்கும் அன்பான இனிய வாழ்த்துகள்!
+                        </div>
+                    </div>
+
+                    <h4 style="margin-bottom: 10px; color: var(--dark-blue); font-size: 14px;">Recent Chats & WhatsApp Last Seen</h4>
+                    
+                    <div class="chat-item">
+                        <div class="chat-avatar">PK</div>
+                        <div class="chat-info" style="flex: 1;">
+                            <h5>PK Chat Support</h5>
+                            <p>Welcome to official secure messaging!</p>
+                        </div>
+                        <div>
+                            <span class="last-seen-online">Online</span>
+                        </div>
+                    </div>
+
+                    <div class="chat-item">
+                        <div class="chat-avatar">JK</div>
+                        <div class="chat-info" style="flex: 1;">
+                            <h5>Jerad Karan (Owner)</h5>
+                            <p>App architecture updated successfully.</p>
+                        </div>
+                        <div>
+                            <span class="last-seen-time" id="dynamicLastSeen">Last seen today at 10:30 AM</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- TAB 2: UPDATES -->
+                <div id="tab-updates" class="tab-content">
+                    <div style="background: var(--white); padding: 16px; border-radius: 10px; text-align: center;">
+                        <h4 style="color: var(--primary-blue); margin-bottom: 8px;">🔄 PK Chat Status & Updates</h4>
+                        <p style="font-size: 13px; color: var(--gray);">WhatsApp-style status updates and multi-language AI translation feeds active.</p>
+                    </div>
+                </div>
+
+                <!-- TAB 3: CALLS & DIAL PAD -->
+                <div id="tab-calls" class="tab-content">
+                    <div class="dial-pad">
+                        <h4 style="margin-bottom: 10px; color: var(--primary-blue);">📞 PK Chat Call Dial Pad</h4>
+                        <input type="text" id="dialNumber" class="dial-input" placeholder="Enter phone number..." readonly>
+                        <div class="dial-grid">
+                            <button class="dial-btn" onclick="pressNum('1')">1</button>
+                            <button class="dial-btn" onclick="pressNum('2')">2</button>
+                            <button class="dial-btn" onclick="pressNum('3')">3</button>
+                            <button class="dial-btn" onclick="pressNum('4')">4</button>
+                            <button class="dial-btn" onclick="pressNum('5')">5</button>
+                            <button class="dial-btn" onclick="pressNum('6')">6</button>
+                            <button class="dial-btn" onclick="pressNum('7')">7</button>
+                            <button class="dial-btn" onclick="pressNum('8')">8</button>
+                            <button class="dial-btn" onclick="pressNum('9')">9</button>
+                            <button class="dial-btn" onclick="clearDial()">C</button>
+                            <button class="dial-btn" onclick="pressNum('0')">0</button>
+                            <button class="dial-btn" onclick="backspaceDial()">⌫</button>
+                        </div>
+                        <div class="call-action-btns">
+                            <button class="call-btn audio-call" onclick="makeCall('Audio')">📞 Audio Call</button>
+                            <button class="call-btn video-call" onclick="makeCall('Video')">📹 Video Call</button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- TAB 4: PROFILE -->
+                <div id="tab-profile" class="tab-content">
+                    <div style="background: var(--white); padding: 16px; border-radius: 10px; margin-bottom: 16px;">
+                        <h4 style="color: var(--primary-blue); margin-bottom: 10px;">👤 User Profile</h4>
+                        <p id="profileDetails" style="font-size: 13px; color: var(--text-color); line-height: 1.6; margin-bottom: 14px;"></p>
+                    </div>
+
+                    <!-- Change Religion Section -->
+                    <div style="background: var(--white); padding: 16px; border-radius: 10px; box-shadow: 0 2px 5px rgba(0,0,0,0.05);">
+                        <h4 style="font-size: 14px; color: var(--primary-blue); margin-bottom: 8px;">🌟 மதத்தை மாற்றுதல் (Change Religion)</h4>
+                        <p style="font-size: 12px; color: var(--gray); margin-bottom: 10px;">உங்களது மதத் தேர்வை எப்போது வேண்டுமானாலும் மாற்றிக்கொள்ளலாம்:</p>
+                        <select id="profileReligionSelect" onchange="updateProfileReligion()" style="width: 100%; padding: 10px; border-radius: 8px; border: 1px solid #cbd5e1; font-size: 14px; background: #f8fafc; color: var(--text-color);">
+                            <option value="hindu">இந்து சமயம் (Hindu)</option>
+                            <option value="christian">கிறிஸ்தவ சமயம் (Christian)</option>
+                            <option value="muslim">இஸ்லாமிய சமயம் (Islam)</option>
+                            <option value="buddhist">பௌத்த சமயம் (Buddhist)</option>
+                            <option value="all">பொதுவானது / அனைத்து மதங்களும் (Universal)</option>
+                        </select>
+                    </div>
+                </div>
+
+            </div>
+
+            <!-- Footer Menu -->
+            <div class="footer-menu">
+                <div class="menu-item active" onclick="switchTab('chats')">💬 Chats</div>
+                <div class="menu-item" onclick="switchTab('updates')">🔄 Updates</div>
+                <div class="menu-item" onclick="switchTab('calls')">📞 Calls</div>
+                <div class="menu-item" onclick="switchTab('profile')">👤 Profile</div>
+            </div>
+        </div>
+
+    </div>
+
+    <script>
+        let callTimerInterval = null;
+        let callSeconds = 0;
+
+        // ஆப் ஓப்பன் ஆனவுடன் ஏற்கனவே பதிவு செய்யப்பட்டுள்ளதா எனச் சோதித்தல்
+        window.addEventListener('DOMContentLoaded', () => {
+            const isRegistered = localStorage.getItem('pk_chat_registered');
+            if (isRegistered === 'true') {
+                document.getElementById('authScreen').style.display = 'none';
+                document.getElementById('mainScreen').style.display = 'flex';
+                checkBirthday();
+                loadUserReligionBroadcast();
+                loadProfileInfo();
+                updateRealLastSeen();
+            }
+        });
+
+        // அனைத்து விவரங்களையும் சரிபார்த்து பதிவு செய்யும் பங்கஷன்
+        function validateAndRegister() {
+            const gmail = document.getElementById('userGmail').value.trim();
+            const phone = document.getElementById('userPhone').value.trim();
+            const dob = document.getElementById('userDob').value;
+            const religion = document.getElementById('userReligion').value;
+
+            if (!gmail || !gmail.includes('@gmail.com')) {
+                alert("தயவுசெய்து சரியான ஜிமெயில் முகவரியை உள்ளிடவும்!");
+                return;
+            }
+            if (!phone) {
+                alert("தயவுசெய்து உங்கள் தொலைபேசி இலக்கத்தை உள்ளிடவும்!");
+                return;
+            }
+            if (!dob) {
+                alert("தயவுசெய்து உங்கள் பிறந்த தேதியையும் ஆண்டையும் உள்ளிடவும்!");
+                return;
+            }
+            if (!religion) {
+                alert("தயவுசெய்து உங்கள் மதத்தைத் தேர்ந்தெடுக்கவும்!");
+                return;
+            }
+
+            // விவரங்களைப் பாதுகாப்பாகச் சேமித்தல்
+            localStorage.setItem('pk_chat_gmail', gmail);
+            localStorage.setItem('pk_chat_phone', phone);
+            localStorage.setItem('pk_chat_dob', dob);
+            localStorage.setItem('pk_chat_religion', religion);
+            localStorage.setItem('pk_chat_registered', 'true');
+
+            // ஸ்கிரீனை மாற்றுதல்
+            document.getElementById('authScreen').style.display = 'none';
+            document.getElementById('mainScreen').style.display = 'flex';
+            
+            alert("சரிபார்ப்பு வெற்றி! பிகே சட் செயலிக்கு உங்களை வரவேற்கிறோம். 🛡️");
+            checkBirthday();
+            loadUserReligionBroadcast();
+            loadProfileInfo();
+        }
+
+        // வாட்சப் பாணி உண்மையான Last Seen கணக்கிடும் முறை
+        function updateRealLastSeen() {
+            const now = new Date();
+            let hours = now.getHours();
+            let minutes = now.getMinutes();
+            const ampm = hours >= 12 ? 'PM' : 'AM';
+            hours = hours % 12;
+            hours = hours ? hours : 12; // the hour '0' should be '12'
+            minutes = minutes < 10 ? '0'+minutes : minutes;
+            const timeStr = `${hours}:${minutes} ${ampm}`;
+            document.getElementById('dynamicLastSeen').innerText = `Last seen today at ${timeStr}`;
+        }
+
+        // பிறந்தநாளைச் சரிபார்த்து வாழ்த்துத் தெரிவிக்கும் பங்கஷன்
+        function checkBirthday() {
+            const savedDob = localStorage.getItem('pk_chat_dob');
+            if (!savedDob) return;
+
+            const today = new Date();
+            const todayMonthDay = String(today.getMonth() + 1).padStart(2, '0') + '-' + String(today.getDate()).padStart(2, '0');
+            const dobMonthDay = savedDob.substring(5, 10);
+
+            if (todayMonthDay === dobMonthDay) {
+                document.getElementById('birthdayGreetingBanner').style.display = 'block';
+            }
+        }
+
+        // பயனர் தேர்ந்தெடுத்த மதத்திற்கு ஏற்ப வாழ்த்துச் செய்தியைக் காட்டுதல்
+        function loadUserReligionBroadcast() {
+            const religion = localStorage.getItem('pk_chat_religion');
+            const msgCard = document.getElementById('officialMessageCard');
+
+            if(religion === 'hindu') {
+                msgCard.innerHTML = "🪔 பிகே சட் குடும்பத்தின் சார்பாக இனிய ஆன்மீக மற்றும் பண்டிகை நல்வாழ்த்துகள்!";
+            } else if(religion === 'christian') {
+                msgCard.innerHTML = "✨ PK Chat official greetings: Wishing you joy, peace, and blessings!";
+            } else if(religion === 'muslim') {
+                msgCard.innerHTML = "🌙 பிகே சட் தரப்பிலிருந்து இனிய நல்வாழ்த்துகள் மற்றும் பிரார்த்தனைகள்!";
+            } else if(religion === 'buddhist') {
+                msgCard.innerHTML = "☸️ பிகே சட் குடும்பத்தின் அமைதி மற்றும் இனிய நல்வாழ்த்துகள்!";
+            } else {
+                msgCard.innerHTML = "🎉 அனைத்து பிகே சட் பயனர்களுக்கும் பிகே சட் தரப்பிலிருந்து அன்பான இனிய வாழ்த்துகள்!";
+            }
+        }
+
+        // பிரொஃபைல் விவரங்களை ஏற்றுதல்
+        function loadProfileInfo() {
+            const gmail = localStorage.getItem('pk_chat_gmail') || 'N/A';
+            const phone = localStorage.getItem('pk_chat_phone') || 'N/A';
+            const dob = localStorage.getItem('pk_chat_dob') || 'N/A';
+            const religion = localStorage.getItem('pk_chat_religion') || 'all';
+
+            document.getElementById('profileDetails').innerHTML = `
+                📧 <b>Gmail:</b> ${gmail}<br>
+                📞 <b>Phone:</b> ${phone}<br>
+                🎂 <b>Date of Birth:</b> ${dob}<br>
+                🌟 <b>Religion:</b> ${religion.toUpperCase()}<br>
+                🛡️ <b>Account Status:</b> Verified Official User
+            `;
+
+            const profileSelect = document.getElementById('profileReligionSelect');
+            if(profileSelect) {
+                profileSelect.value = religion;
+            }
+        }
+
+        function updateProfileReligion() {
+            const newReligion = document.getElementById('profileReligionSelect').value;
+            localStorage.setItem('pk_chat_religion', newReligion);
+            loadUserReligionBroadcast();
+            loadProfileInfo();
+            alert("மத விருப்பம் வெற்றிகரமாக மாற்றப்பட்டது! 🌟");
+        }
+
+        // Tab Switching Logic
+        function switchTab(tabName) {
+            document.querySelectorAll('.tab-content').forEach(el => el.classList.remove('active'));
+            document.querySelectorAll('.nav-tab').forEach(el => el.classList.remove('active'));
+            document.querySelectorAll('.menu-item').forEach(el => el.classList.remove('active'));
+
+            if(tabName === 'chats') {
+                document.getElementById('tab-chats').classList.add('active');
+                updateRealLastSeen();
+            } else if(tabName === 'updates') {
+                document.getElementById('tab-updates').classList.add('active');
+            } else if(tabName === 'calls') {
+                document.getElementById('tab-calls').classList.add('active');
+            } else if(tabName === 'profile') {
+                document.getElementById('tab-profile').classList.add('active');
+                loadProfileInfo();
+            }
+        }
+
+        // Dial Pad Functions
+        function pressNum(num) {
+            const dialInput = document.getElementById('dialNumber');
+            dialInput.value += num;
+        }
+        function clearDial() {
+            document.getElementById('dialNumber').value = '';
+        }
+        function backspaceDial() {
+            const dialInput = document.getElementById('dialNumber');
+            dialInput.value = dialInput.value.slice(0, -1);
+        }
+
+        // Realistic WhatsApp Calling & Ringing Mechanism
+        function makeCall(callType) {
+            const num = document.getElementById('dialNumber').value;
+            if(!num) {
+                alert("தயவுசெய்து அழைக்க வேண்டிய எண்ணை டயல் செய்யவும்!");
+                return;
+            }
+
+            // Display Call Screen Overlay
+            document.getElementById('callTypeLabel').innerText = `PK CHAT ${callType.toUpperCase()} CALL`;
+            document.getElementById('callNumberDisplay').innerText = num;
+            document.getElementById('callAvatarInitial').innerText = num.slice(-2);
+            document.getElementById('callStatusText').innerText = "Ringing...";
+            document.getElementById('callTimer').style.display = 'none';
+            document.getElementById('callScreen').style.display = 'flex';
+
+            callSeconds = 0;
+            // Simulate Ringing for 2 seconds, then Connect & Start Timer
+            setTimeout(() => {
+                document.getElementById('callStatusText').innerText = "Connected";
+                document.getElementById('callTimer').style.display = 'block';
+                startCallTimer();
+            }, 2500);
+        }
+
+        function startCallTimer() {
+            clearInterval(callTimerInterval);
+            callTimerInterval = setInterval(() => {
+                callSeconds++;
+                const mins = String(Math.floor(callSeconds / 60)).padStart(2, '0');
+                const secs = String(callSeconds % 60).padStart(2, '0');
+                document.getElementById('callTimer').innerText = `${mins}:${secs}`;
+            }, 1000);
+        }
+
+        function endCall() {
+            clearInterval(callTimerInterval);
+            document.getElementById('callScreen').style.display = 'none';
+            document.getElementById('dialNumber').value = '';
+        }
+
+        function triggerSOS() {
+            alert("🚨 SOS Activated! 5-Hour Live GPS tracking & Emergency authorities notified.");
+        }
+    </script>
+</body>
+</html>

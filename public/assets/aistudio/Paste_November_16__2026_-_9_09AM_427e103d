@@ -1,0 +1,712 @@
+<!DOCTYPE html>
+<html lang="ta">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>PK CHAT - Official Secure Messenger</title>
+    <style>
+        :root {
+            --primary-blue: #0284c7;
+            --light-blue: #f0f9ff;
+            --dark-blue: #0369a1;
+            --bg-color: #e0f2fe;
+            --text-color: #0f172a;
+            --white: #ffffff;
+            --gray: #64748b;
+            --green: #10b981;
+            --red: #ef4444;
+            --glass-bg: rgba(255, 255, 255, 0.75);
+            --glass-border: rgba(255, 255, 255, 0.6);
+        }
+        * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
+        body { background: linear-gradient(135deg, #bae6fd, #e0f2fe); color: var(--text-color); display: flex; justify-content: center; align-items: center; min-height: 100vh; overflow: hidden; }
+        
+        /* Exact WhatsApp Mobile Frame Sizing with 3D Blue Glassmorphism */
+        .app-container { width: 100%; max-width: 420px; height: 100vh; max-height: 880px; background: var(--white); display: flex; flex-direction: column; box-shadow: 0 20px 40px rgba(2, 132, 199, 0.3); border-radius: 0px; overflow: hidden; position: relative; }
+        @media (min-width: 481px) { .app-container { height: 850px; border-radius: 24px; border: 10px solid #0369a1; } }
+        
+        /* Auth & Registration Screen */
+        .auth-screen { position: absolute; top: 0; left: 0; width: 100%; height: 100%; background: var(--white); z-index: 30; display: flex; flex-direction: column; justify-content: center; padding: 24px; overflow-y: auto; }
+        .auth-title { font-size: 22px; font-weight: bold; color: var(--dark-blue); margin-bottom: 6px; text-align: center; }
+        .auth-subtitle { font-size: 13px; color: var(--gray); text-align: center; margin-bottom: 20px; }
+        .input-group { margin-bottom: 14px; }
+        .input-group label { display: block; font-size: 12px; font-weight: 600; margin-bottom: 4px; color: var(--dark-blue); }
+        .input-group input, .input-group select { width: 100%; padding: 12px; border-radius: 10px; border: 1px solid #bae6fd; font-size: 14px; background: #f0f9ff; color: var(--text-color); outline: none; }
+        .auth-btn { background: linear-gradient(135deg, #0284c7, #0369a1); color: var(--white); border: none; width: 100%; padding: 14px; border-radius: 10px; font-weight: bold; font-size: 15px; cursor: pointer; margin-top: 10px; box-shadow: 0 4px 15px rgba(2, 132, 199, 0.4); }
+
+        /* Subscription Paywall Screen */
+        #paywallScreen { position: absolute; top: 0; left: 0; width: 100%; height: 100%; background: var(--white); z-index: 50; display: none; flex-direction: column; justify-content: center; align-items: center; padding: 24px; text-align: center; }
+        .paywall-icon { font-size: 50px; margin-bottom: 16px; }
+        .paywall-title { font-size: 22px; font-weight: bold; color: var(--dark-blue); margin-bottom: 10px; }
+        .paywall-desc { font-size: 14px; color: var(--gray); line-height: 1.5; margin-bottom: 24px; }
+        .paywall-btn { background: var(--green); color: var(--white); border: none; width: 100%; padding: 14px; border-radius: 10px; font-weight: bold; font-size: 16px; cursor: pointer; box-shadow: 0 4px 15px rgba(16, 185, 129, 0.4); }
+
+        /* Call Screen Overlay */
+        #callScreen { position: absolute; top: 0; left: 0; width: 100%; height: 100%; background: linear-gradient(135deg, #0f172a, #0369a1); z-index: 40; display: none; flex-direction: column; justify-content: space-between; align-items: center; padding: 40px 20px; color: var(--white); text-align: center; }
+        .call-avatar-lg { width: 100px; height: 100px; background: rgba(255,255,255,0.2); border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 32px; font-weight: bold; margin-top: 40px; box-shadow: 0 0 20px rgba(255,255,255,0.3); }
+        .end-call-btn { background: var(--red); color: var(--white); border: none; width: 70px; height: 70px; border-radius: 50%; font-size: 24px; cursor: pointer; display: flex; align-items: center; justify-content: center; box-shadow: 0 4px 15px rgba(239, 68, 68, 0.5); margin-bottom: 30px; }
+
+        /* Status Viewer Overlay */
+        #statusViewer { position: absolute; top: 0; left: 0; width: 100%; height: 100%; background: #000; z-index: 60; display: none; flex-direction: column; justify-content: space-between; color: var(--white); padding: 20px; }
+        .status-progress-bar { width: 100%; height: 3px; background: rgba(255,255,255,0.3); border-radius: 2px; margin-bottom: 15px; overflow: hidden; }
+        .status-progress-fill { width: 0%; height: 100%; background: var(--white); transition: width linear; }
+        .status-viewer-content { flex: 1; display: flex; align-items: center; justify-content: center; text-align: center; font-size: 20px; padding: 20px; }
+        .status-like-footer { display: flex; align-items: center; justify-content: space-between; padding: 10px 0; }
+        .status-like-btn { background: rgba(255,255,255,0.2); border: none; color: var(--white); padding: 10px 20px; border-radius: 20px; font-size: 15px; cursor: pointer; display: flex; align-items: center; gap: 6px; }
+
+        /* Main App Screen */
+        .main-screen { display: none; flex-direction: column; height: 100%; position: relative; background: #f0f9ff; }
+        
+        /* WhatsApp Header with 3D Blue Glassmorphism */
+        .app-header { background: linear-gradient(135deg, #0284c7, #0369a1); color: var(--white); padding: 14px 16px; display: flex; justify-content: space-between; align-items: center; box-shadow: 0 4px 10px rgba(2, 132, 199, 0.3); }
+        .app-title { font-size: 20px; font-weight: bold; display: flex; align-items: center; gap: 8px; }
+        .badge { background: rgba(255,255,255,0.25); font-size: 10px; padding: 2px 8px; border-radius: 12px; backdrop-filter: blur(5px); }
+        
+        /* Content Area & Tabs */
+        .content-area { flex: 1; overflow-y: auto; padding: 14px; position: relative; }
+        .tab-content { display: none; }
+        .tab-content.active { display: block; }
+
+        /* Chat Item with 3D Glass Card */
+        .chat-item { background: var(--glass-bg); backdrop-filter: blur(10px); border: 1px solid var(--glass-border); padding: 12px; border-radius: 14px; display: flex; align-items: center; gap: 12px; margin-bottom: 10px; box-shadow: 0 4px 12px rgba(2, 132, 199, 0.08); cursor: pointer; transition: transform 0.2s; }
+        .chat-item:hover { transform: translateY(-2px); }
+        .chat-avatar { width: 48px; height: 48px; background: linear-gradient(135deg, #0284c7, #0369a1); color: var(--white); border-radius: 50%; display: flex; align-items: center; justify-content: center; font-weight: bold; box-shadow: 0 4px 10px rgba(2, 132, 199, 0.3); }
+        .chat-info h5 { font-size: 15px; color: var(--text-color); }
+        .chat-info p { font-size: 12px; color: var(--gray); margin-top: 2px; }
+        .last-seen-online { font-size: 11px; color: var(--green); font-weight: 600; }
+
+        /* Viber-Style Emojis Tray */
+        .viber-emoji-tray { background: var(--glass-bg); backdrop-filter: blur(10px); border: 1px solid var(--glass-border); padding: 12px; border-radius: 14px; margin-bottom: 14px; box-shadow: 0 4px 12px rgba(2, 132, 199, 0.08); text-align: center; }
+        .viber-emoji-tray h4 { font-size: 13px; color: var(--dark-blue); margin-bottom: 8px; }
+        .emoji-grid { display: flex; justify-content: space-around; font-size: 26px; cursor: pointer; }
+        .emoji-grid span { transition: transform 0.2s; display: inline-block; }
+        .emoji-grid span:hover { transform: scale(1.35); }
+
+        @keyframes viberFloat {
+            0% { transform: translateY(0px) scale(0.5); opacity: 0; }
+            30% { transform: translateY(-40px) scale(1.4); opacity: 1; }
+            100% { transform: translateY(-160px) scale(1.1); opacity: 0; }
+        }
+        .floating-emoji { position: absolute; bottom: 50px; left: 50%; font-size: 40px; animation: viberFloat 1.8s ease-out forwards; z-index: 100; pointer-events: none; }
+
+        /* WhatsApp Style Status Section (Matching Updates Screen) */
+        .status-my-section { background: var(--glass-bg); backdrop-filter: blur(10px); border: 1px solid var(--glass-border); padding: 12px; border-radius: 14px; display: flex; align-items: center; gap: 12px; margin-bottom: 14px; box-shadow: 0 4px 12px rgba(2, 132, 199, 0.08); cursor: pointer; }
+        .status-ring { width: 52px; height: 52px; border-radius: 50%; border: 3px solid var(--green); display: flex; align-items: center; justify-content: center; position: relative; background: #e0f2fe; font-weight: bold; color: var(--dark-blue); }
+        .status-ring.has-status { border-color: var(--green); }
+        .status-ring.no-status { border-color: var(--gray); }
+
+        /* SOS Tab Design */
+        .sos-container { background: var(--glass-bg); backdrop-filter: blur(10px); border: 1px solid var(--glass-border); padding: 20px; border-radius: 16px; text-align: center; box-shadow: 0 8px 20px rgba(239, 68, 68, 0.15); margin-bottom: 16px; }
+        .sos-main-btn { background: linear-gradient(135deg, #ef4444, #dc2626); color: var(--white); border: none; width: 100%; padding: 18px; border-radius: 14px; font-weight: bold; font-size: 17px; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 10px; box-shadow: 0 6px 20px rgba(239, 68, 68, 0.4); margin-bottom: 16px; }
+
+        /* Dial Pad */
+        .dial-pad { background: var(--glass-bg); backdrop-filter: blur(10px); border: 1px solid var(--glass-border); padding: 16px; border-radius: 14px; text-align: center; box-shadow: 0 4px 12px rgba(2, 132, 199, 0.08); margin-bottom: 14px; }
+        .dial-input { width: 100%; padding: 12px; font-size: 18px; text-align: center; border: 1px solid #bae6fd; border-radius: 10px; margin-bottom: 12px; background: #f0f9ff; color: var(--text-color); outline: none; }
+        .dial-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin-bottom: 12px; }
+        .dial-btn { padding: 12px; font-size: 16px; font-weight: bold; background: #e0f2fe; border: none; border-radius: 10px; cursor: pointer; color: var(--dark-blue); transition: background 0.2s; }
+        .dial-btn:hover { background: #bae6fd; }
+        .call-action-btns { display: flex; gap: 10px; }
+        .call-btn { flex: 1; padding: 12px; border: none; border-radius: 10px; font-weight: bold; color: var(--white); cursor: pointer; font-size: 14px; }
+        .audio-call { background: var(--green); box-shadow: 0 4px 10px rgba(16, 185, 129, 0.3); }
+        .video-call { background: var(--dark-blue); box-shadow: 0 4px 10px rgba(3, 105, 161, 0.3); }
+        
+        /* Exact WhatsApp Bottom Navigation (Chats | Updates | SOS | Calls) */
+        .footer-menu { display: flex; justify-content: space-around; background: var(--white); padding: 10px 0; border-top: 1px solid #bae6fd; box-shadow: 0 -4px 15px rgba(2, 132, 199, 0.05); }
+        .menu-item { display: flex; flex-direction: column; align-items: center; font-size: 12px; color: var(--gray); cursor: pointer; font-weight: 600; transition: color 0.2s; }
+        .menu-item.active { color: var(--dark-blue); }
+        .menu-item span.icon { font-size: 20px; margin-bottom: 2px; }
+    </style>
+</head>
+<body>
+
+    <div class="app-container" id="appContainer">
+        
+        <!-- 1. Mandatory Authentication & Registration Screen -->
+        <div id="authScreen" class="auth-screen">
+            <div class="auth-title">🛡️ PK Chat Secure Registration</div>
+            <div class="auth-subtitle">பிறந்த தேதி மற்றும் மதத்துடன் பாதுகாப்பாக பதிவு செய்யவும்</div>
+            
+            <div class="input-group">
+                <label>ஜிமெயில் முகவரி (Gmail Account):</label>
+                <input type="email" id="userGmail" placeholder="example@gmail.com" required>
+            </div>
+
+            <div class="input-group">
+                <label>தொலைபேசி இலக்கம் (Phone Number):</label>
+                <input type="tel" id="userPhone" placeholder="+94 77..." required>
+            </div>
+
+            <div class="input-group">
+                <label>பிறந்த தேதி (Date of Birth):</label>
+                <input type="date" id="userDob" required>
+            </div>
+
+            <div class="input-group">
+                <label>மதம் / கலாச்சாரம் (Religion & Culture):</label>
+                <select id="userReligion" required>
+                    <option value="">-- மதத்தைத் தேர்ந்தெடுக்கவும் --</option>
+                    <option value="hindu">இந்து சமயம் (Hindu)</option>
+                    <option value="christian">கிறிஸ்தவ சமயம் (Christian)</option>
+                    <option value="muslim">இஸ்லாமிய சமயம் (Islam)</option>
+                    <option value="buddhist">பௌத்த சமயம் (Buddhist)</option>
+                    <option value="all">பொதுவானது / அனைத்து மதங்களும் (Universal)</option>
+                </select>
+            </div>
+
+            <button class="auth-btn" onclick="validateAndRegister()">பதிவு செய்து உள்ளே செல் (Secure Entry)</button>
+        </div>
+
+        <!-- 2. Subscription Paywall Screen -->
+        <div id="paywallScreen">
+            <div class="paywall-icon">⏳🛡️</div>
+            <div class="paywall-title">30-Day Free Trial Expired</div>
+            <div class="paywall-desc">
+                உங்கள் 30 நாள் இலவச சோதனை காலம் நிறைவடைந்தது. PK Chat சேவைகளைத் தொடர்ந்து பெற ஆண்டு சந்தா ($10) செலுத்தவும்.
+            </div>
+            <div style="font-size: 20px; font-weight: bold; color: var(--dark-blue); margin-bottom: 20px;">$10 USD / Year</div>
+            <button class="paywall-btn" onclick="simulateSubscription()">Subscribe Now ($10/year)</button>
+        </div>
+
+        <!-- 3. Call Screen Overlay -->
+        <div id="callScreen">
+            <div>
+                <p id="callTypeLabel" style="font-size: 13px; letter-spacing: 1px; opacity: 0.8; margin-top: 15px;">PK CHAT SECURE CALL</p>
+                <h2 id="callNumberDisplay" style="font-size: 22px; margin-top: 5px;">+94 77 123 4567</h2>
+            </div>
+            <div class="call-avatar-lg" id="callAvatarInitial">PK</div>
+            <div>
+                <p id="callStatusText" style="font-size: 16px; color: #10b981; font-weight: 500;">Ringing...</p>
+                <p id="callTimer" style="font-size: 13px; color: #bae6fd; margin-top: 5px; display: none;">00:00</p>
+            </div>
+            <button class="end-call-btn" onclick="endCall()" title="End Call">📞</button>
+        </div>
+
+        <!-- 4. Status Viewer Overlay -->
+        <div id="statusViewer">
+            <div>
+                <div class="status-progress-bar"><div class="status-progress-fill" id="statusProgressFill"></div></div>
+                <div style="display: flex; justify-content: space-between; font-size: 14px;">
+                    <span id="viewerName">User Status</span>
+                    <span onclick="closeStatusViewer()" style="cursor: pointer; font-weight: bold;">✕ Close</span>
+                </div>
+            </div>
+            <div class="status-viewer-content" id="viewerTextContent">Status loading...</div>
+            <div class="status-like-footer">
+                <button class="status-like-btn" onclick="likeCurrentStatus()">
+                    ❤️ <span id="statusLikeCount">0</span> Likes
+                </button>
+                <span id="statusExpiryInfo" style="font-size: 12px; color: #94a3b8;">Expires in 24h</span>
+            </div>
+        </div>
+
+        <!-- 5. Main Application Screen -->
+        <div id="mainScreen" class="main-screen">
+            <!-- WhatsApp Header -->
+            <div class="app-header">
+                <div class="app-title">
+                    PK Chat <span class="badge">🛡️ 3D Secure</span>
+                </div>
+                <div>🔍 📎 ⠇</div>
+            </div>
+
+            <!-- Content Area -->
+            <div class="content-area" id="contentArea">
+                
+                <!-- Birthday Banner -->
+                <div id="birthdayGreetingBanner" style="display: none; background: linear-gradient(135deg, #ec4899, #db2777); color: var(--white); padding: 14px; border-radius: 14px; margin-bottom: 14px; box-shadow: 0 4px 15px rgba(236, 72, 153, 0.3);">
+                    <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 6px;">
+                        <span style="font-size: 18px;">🥳🎂</span>
+                        <h4 style="font-size: 15px; font-weight: bold;">Happy Birthday!</h4>
+                    </div>
+                    <p style="font-size: 13px;">🎉 இனிய பிறந்தநாள் நல்வாழ்த்துகள்!</p>
+                </div>
+
+                <!-- TAB 1: CHATS -->
+                <div id="tab-chats" class="tab-content active">
+                    <div class="viber-emoji-tray">
+                        <h4>✨ வைபர் பாணி அனிமேஷன் இமோஜிகள்</h4>
+                        <div class="emoji-grid">
+                            <span onclick="sendViberEmoji('❤️')">❤️</span>
+                            <span onclick="sendViberEmoji('😂')">😂</span>
+                            <span onclick="sendViberEmoji('😍')">😍</span>
+                            <span onclick="sendViberEmoji('🎉')">🎉</span>
+                            <span onclick="sendViberEmoji('🔥')">🔥</span>
+                            <span onclick="sendViberEmoji('👍')">👍</span>
+                            <span onclick="sendViberEmoji('🪔')">🪔</span>
+                        </div>
+                    </div>
+
+                    <div style="background: linear-gradient(135deg, #0284c7, #0369a1); color: var(--white); padding: 14px; border-radius: 14px; margin-bottom: 14px; box-shadow: 0 4px 15px rgba(2, 132, 199, 0.3);">
+                        <h4 style="font-size: 15px; font-weight: bold; margin-bottom: 6px;">🛡️ PK Chat Official Broadcast</h4>
+                        <div id="officialMessageCard" style="background: rgba(255,255,255,0.15); padding: 10px; border-radius: 10px; font-size: 13px;">
+                            🎉 அனைத்து பிகே சட் பயனர்களுக்கும் அன்பான இனிய வாழ்த்துகள்!
+                        </div>
+                    </div>
+
+                    <h4 style="margin-bottom: 8px; color: var(--dark-blue); font-size: 13px;">Recent Chats & Auto-Reply Simulator</h4>
+                    <div class="chat-item" onclick="simulateIncomingChat()">
+                        <div class="chat-avatar">JK</div>
+                        <div class="chat-info" style="flex: 1;">
+                            <h5>Test Chat (Click to Simulate Message)</h5>
+                            <p>Tap to test your custom WhatsApp Business Auto-Reply</p>
+                        </div>
+                        <div><span class="last-seen-online">Online</span></div>
+                    </div>
+                </div>
+
+                <!-- TAB 2: UPDATES (WhatsApp Style Status matching screenshot) -->
+                <div id="tab-updates" class="tab-content">
+                    <h3 style="color: var(--dark-blue); margin-bottom: 12px; font-size: 18px;">Updates</h3>
+                    
+                    <div style="font-size: 13px; font-weight: bold; color: var(--gray); margin-bottom: 8px;">Status</div>
+                    <div class="status-my-section" onclick="openMyStatus()">
+                        <div class="status-ring" id="myStatusRing">My</div>
+                        <div style="flex: 1;">
+                            <h5 style="font-size: 14px; color: var(--text-color);">My status</h5>
+                            <p style="font-size: 11px; color: var(--gray);" id="myStatusSubText">Tap to add status update (24h expiry)</p>
+                        </div>
+                    </div>
+
+                    <!-- Add Status Input & Privacy Controls -->
+                    <div style="background: var(--glass-bg); backdrop-filter: blur(10px); border: 1px solid var(--glass-border); padding: 14px; border-radius: 14px; margin-bottom: 14px;">
+                        <label style="font-size: 11px; font-weight: 600; color: var(--dark-blue); display: block; margin-bottom: 4px;">புதிய ஸ்டேட்டஸ் எழுதுங்கள்:</label>
+                        <input type="text" id="statusInputText" placeholder="Type status update..." style="width: 100%; padding: 10px; border-radius: 10px; border: 1px solid #bae6fd; font-size: 13px; margin-bottom: 8px; background: #f0f9ff; outline: none;">
+                        
+                        <label style="font-size: 11px; font-weight: 600; color: var(--dark-blue); display: block; margin-bottom: 4px;">ஸ்டேட்டஸ் யார் பார்க்கலாம்? (Privacy):</label>
+                        <select id="statusPrivacySelect" style="width: 100%; padding: 10px; border-radius: 10px; border: 1px solid #bae6fd; font-size: 13px; margin-bottom: 10px; background: #f0f9ff; outline: none;">
+                            <option value="all">அனைவரும் பார்க்கலாம் (Everyone)</option>
+                            <option value="selected">தேர்ந்தெடுக்கப்பட்டவர்கள் மட்டும் (Only Selected)</option>
+                            <option value="private">தனிப்பட்டது (Private / Only Me)</option>
+                        </select>
+
+                        <button class="auth-btn" onclick="postNewStatus()" style="margin-top: 0; padding: 10px;">ஸ்டேட்டஸ் பதிவேற்று</button>
+                    </div>
+
+                    <div style="font-size: 13px; font-weight: bold; color: var(--gray); margin-bottom: 8px;">Channels</div>
+                    <div class="chat-item">
+                        <div class="chat-avatar" style="background: #10b981;">PK</div>
+                        <div class="chat-info" style="flex: 1;">
+                            <h5>PK Chat Official Channel</h5>
+                            <p>🔒 Secure updates & broadcasts 🪷</p>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- TAB 3: SOS (Replaced Communities as requested) -->
+                <div id="tab-sos" class="tab-content">
+                    <div class="sos-container">
+                        <div style="font-size: 40px; margin-bottom: 10px;">🚨</div>
+                        <h3 style="color: var(--red); font-size: 20px; margin-bottom: 8px;">Emergency SOS Hub</h3>
+                        <p style="font-size: 13px; color: var(--gray); margin-bottom: 16px; line-height: 1.4;">
+                            5-Hour Live GPS tracking & Emergency authorities notified with maximum security priority.
+                        </p>
+                        <button class="sos-main-btn" onclick="triggerSOS()">
+                            🚨 ACTIVATE SOS EMERGENCY
+                        </button>
+                    </div>
+                </div>
+
+                <!-- TAB 4: CALLS -->
+                <div id="tab-calls" class="tab-content">
+                    <div class="dial-pad">
+                        <h4 style="margin-bottom: 8px; color: var(--dark-blue); font-size: 15px;">📞 Secure Call Dial Pad</h4>
+                        <input type="text" id="dialNumber" class="dial-input" placeholder="Enter phone number..." readonly>
+                        <div class="dial-grid">
+                            <button class="dial-btn" onclick="pressNum('1')">1</button>
+                            <button class="dial-btn" onclick="pressNum('2')">2</button>
+                            <button class="dial-btn" onclick="pressNum('3')">3</button>
+                            <button class="dial-btn" onclick="pressNum('4')">4</button>
+                            <button class="dial-btn" onclick="pressNum('5')">5</button>
+                            <button class="dial-btn" onclick="pressNum('6')">6</button>
+                            <button class="dial-btn" onclick="pressNum('7')">7</button>
+                            <button class="dial-btn" onclick="pressNum('8')">8</button>
+                            <button class="dial-btn" onclick="pressNum('9')">9</button>
+                            <button class="dial-btn" onclick="clearDial()">C</button>
+                            <button class="dial-btn" onclick="pressNum('0')">0</button>
+                            <button class="dial-btn" onclick="backspaceDial()">⌫</button>
+                        </div>
+                        <div class="call-action-btns">
+                            <button class="call-btn audio-call" onclick="makeCall('Audio')">📞 Audio Call</button>
+                            <button class="call-btn video-call" onclick="makeCall('Video')">📹 Video Call</button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- TAB 5: PROFILE & CUSTOM AUTO-REPLY -->
+                <div id="tab-profile" class="tab-content">
+                    <div style="background: var(--glass-bg); backdrop-filter: blur(10px); border: 1px solid var(--glass-border); padding: 14px; border-radius: 14px; margin-bottom: 14px; box-shadow: 0 4px 12px rgba(2, 132, 199, 0.08);">
+                        <h4 style="color: var(--dark-blue); margin-bottom: 8px; font-size: 15px;">👤 User Profile & Details</h4>
+                        <p id="profileDetails" style="font-size: 13px; color: var(--text-color); line-height: 1.5; margin-bottom: 12px;"></p>
+                        
+                        <div style="border-top: 1px solid #bae6fd; padding-top: 10px;">
+                            <h5 style="font-size: 13px; color: var(--dark-blue); margin-bottom: 6px;">விவரங்களை திருத்துக (Edit Profile):</h5>
+                            <div class="input-group" style="margin-bottom: 8px;">
+                                <label style="font-size: 11px;">பிறந்த தேதி (DOB):</label>
+                                <input type="date" id="editDob" style="padding: 8px; font-size: 13px;">
+                            </div>
+                            <div class="input-group" style="margin-bottom: 8px;">
+                                <label style="font-size: 11px;">மதம் (Religion):</label>
+                                <select id="editReligion" style="padding: 8px; font-size: 13px;">
+                                    <option value="hindu">இந்து சமயம் (Hindu)</option>
+                                    <option value="christian">கிறிஸ்தவ சமயம் (Christian)</option>
+                                    <option value="muslim">இஸ்லாமிய சமயம் (Islam)</option>
+                                    <option value="buddhist">பௌத்த சமயம் (Buddhist)</option>
+                                    <option value="all">பொதுவானது / அனைத்து மதங்களும் (Universal)</option>
+                                </select>
+                            </div>
+                            <button class="auth-btn" onclick="saveProfileEdits()" style="margin-top: 4px; padding: 10px; font-size: 13px;">மாற்றங்களைச் சேமி (Save Changes)</button>
+                        </div>
+                    </div>
+
+                    <!-- Custom Auto-Reply Settings -->
+                    <div style="background: var(--glass-bg); backdrop-filter: blur(10px); border: 1px solid var(--glass-border); padding: 14px; border-radius: 14px; box-shadow: 0 4px 12px rgba(2, 132, 199, 0.08);">
+                        <h4 style="font-size: 14px; color: var(--dark-blue); margin-bottom: 6px;">🤖 வாட்ஸ்அப் பிசினஸ் பாணி ஆட்டோ-ரிப்ளை</h4>
+                        <p style="font-size: 11px; color: var(--gray); margin-bottom: 10px;">நீங்கள் கீழே என்ன வாசகத்தை எழுதிச் சேமிக்கிறீர்கீர்களோ, அது மட்டுமே உங்களைத் தொடர்பு கொள்பவர்களுக்குத் தானாகச் செல்லும்:</p>
+                        
+                        <div style="margin-bottom: 8px;">
+                            <label style="font-size: 11px; font-weight: 600; color: var(--dark-blue);">
+                                <input type="checkbox" id="autoReplyToggle" style="margin-right: 6px;"> ஆட்டோ-ரிப்ளை ஆன் செய் (Enable Auto-Reply)
+                            </label>
+                        </div>
+
+                        <div class="input-group">
+                            <label style="font-size: 11px;">உங்கள் சொந்த செய்தி (Your Custom Away Message):</label>
+                            <textarea id="autoReplyMsg" rows="3" style="width: 100%; padding: 8px; border-radius: 8px; border: 1px solid #bae6fd; font-size: 13px; background: #f0f9ff; outline: none;" placeholder="எ.கா: சாப்பிட்டீர்களா? நான் இப்போது பிஸியாக இருக்கிறேன், பின்னர் அழைக்கிறேன்!"></textarea>
+                        </div>
+                        <button class="auth-btn" onclick="saveAutoReplySettings()" style="margin-top: 4px; padding: 10px; font-size: 13px;">உங்கள் செய்தியைச் சேமி</button>
+                    </div>
+                </div>
+
+            </div>
+
+            <!-- Exact WhatsApp Bottom Navigation Layout (Chats | Updates | SOS | Calls | Profile) -->
+            <div class="footer-menu">
+                <div class="menu-item active" onclick="switchTab('chats')">
+                    <span class="icon">💬</span> Chats
+                </div>
+                <div class="menu-item" onclick="switchTab('updates')">
+                    <span class="icon">🔄</span> Updates
+                </div>
+                <div class="menu-item" onclick="switchTab('sos')">
+                    <span class="icon">🚨</span> SOS
+                </div>
+                <div class="menu-item" onclick="switchTab('calls')">
+                    <span class="icon">📞</span> Calls
+                </div>
+                <div class="menu-item" onclick="switchTab('profile')">
+                    <span class="icon">👤</span> Profile
+                </div>
+            </div>
+        </div>
+
+    </div>
+
+    <script>
+        let callTimerInterval = null;
+        let callSeconds = 0;
+        let currentLikes = 0;
+
+        window.addEventListener('DOMContentLoaded', () => {
+            const isRegistered = localStorage.getItem('pk_chat_registered');
+            if (isRegistered === 'true') {
+                document.getElementById('authScreen').style.display = 'none';
+                checkSubscriptionStatus();
+            }
+            loadMyStatusUI();
+            loadAutoReplySettings();
+            
+            window.addEventListener('keyup', (e) => {
+                if (e.key == 'PrintScreen') {
+                    alert("⚠️ பாதுகாப்பு எச்சரிக்கை: PK Chat செயலியில் ஸ்கிரீன்ஷாட் எடுக்க அனுமதி இல்லை!");
+                }
+            });
+        });
+
+        function checkSubscriptionStatus() {
+            const isSubscribed = localStorage.getItem('pk_chat_subscribed');
+            const regTimestamp = localStorage.getItem('pk_chat_reg_timestamp');
+            if (isSubscribed === 'true') { showMainApp(); return; }
+            const now = Date.now();
+            const thirtyDaysMs = 30 * 24 * 60 * 60 * 1000;
+            if (regTimestamp && (now - parseInt(regTimestamp)) > thirtyDaysMs) {
+                document.getElementById('paywallScreen').style.display = 'flex';
+                document.getElementById('mainScreen').style.display = 'none';
+            } else {
+                showMainApp();
+            }
+        }
+
+        function showMainApp() {
+            document.getElementById('paywallScreen').style.display = 'none';
+            document.getElementById('mainScreen').style.display = 'flex';
+            checkBirthday();
+            loadUserReligionBroadcast();
+            loadProfileInfo();
+        }
+
+        function simulateSubscription() {
+            localStorage.setItem('pk_chat_subscribed', 'true');
+            alert("சந்தா வெற்றிகரமாகச் செலுத்தப்பட்டது! 🎉");
+            showMainApp();
+        }
+
+        function validateAndRegister() {
+            const gmail = document.getElementById('userGmail').value.trim();
+            const phone = document.getElementById('userPhone').value.trim();
+            const dob = document.getElementById('userDob').value;
+            const religion = document.getElementById('userReligion').value;
+
+            if (!gmail || !gmail.includes('@gmail.com') || !phone || !dob || !religion) {
+                alert("அனைத்து விவரங்களையும் (பிறந்த தேதி மற்றும் மதம் உட்பட) சரியாக நிரப்பவும்!");
+                return;
+            }
+
+            localStorage.setItem('pk_chat_gmail', gmail);
+            localStorage.setItem('pk_chat_phone', phone);
+            localStorage.setItem('pk_chat_dob', dob);
+            localStorage.setItem('pk_chat_religion', religion);
+            localStorage.setItem('pk_chat_registered', 'true');
+            localStorage.setItem('pk_chat_reg_timestamp', Date.now().toString());
+
+            document.getElementById('authScreen').style.display = 'none';
+            alert("பதிவு வெற்றி! 30 நாள் இலவச சோதனை தொடங்கியது. 🛡️");
+            showMainApp();
+        }
+
+        function saveAutoReplySettings() {
+            const isEnabled = document.getElementById('autoReplyToggle').checked;
+            const msg = document.getElementById('autoReplyMsg').value.trim();
+            localStorage.setItem('pk_autoreply_enabled', isEnabled);
+            localStorage.setItem('pk_autoreply_msg', msg);
+            alert("உங்கள் சொந்த ஆட்டோ-ரிப்ளை செய்தி வெற்றிகரமாகச் சேமிக்கப்பட்டது!");
+        }
+
+        function loadAutoReplySettings() {
+            const isEnabled = localStorage.getItem('pk_autoreply_enabled') === 'true';
+            const msg = localStorage.getItem('pk_autoreply_msg') || "";
+            const toggle = document.getElementById('autoReplyToggle');
+            const msgBox = document.getElementById('autoReplyMsg');
+            if(toggle) toggle.checked = isEnabled;
+            if(msgBox) msgBox.value = msg;
+        }
+
+        function simulateIncomingChat() {
+            const isEnabled = localStorage.getItem('pk_autoreply_enabled') === 'true';
+            const userCustomMsg = localStorage.getItem('pk_autoreply_msg') || "";
+            
+            alert("📥 புதிய குறுஞ்செய்தி வந்தது: 'என்ன செய்கிறீர்கள் / சாப்பிட்டீர்களா?'");
+            
+            if (isEnabled) {
+                if (userCustomMsg) {
+                    setTimeout(() => {
+                        alert("🤖 [நீங்கள் செட் செய்த ஆட்டோ-ரிப்ளை அனுப்பப்பட்டது]:\n" + userCustomMsg);
+                    }, 1000);
+                } else {
+                    alert("ℹ️ ஆட்டோ-ரிப்ளை ஆன் செய்யப்பட்டுள்ளது, ஆனால் நீங்கள் எந்தச் செய்தியையும் டைப் செய்யவில்லை. (Profile-ல் செய்தியை உள்ளிடவும்)");
+                }
+            } else {
+                alert("ℹ️ ஆட்டோ-ரிப்ளை ஆஃப் செய்யப்பட்டுள்ளது.");
+            }
+        }
+
+        function postNewStatus() {
+            const statusText = document.getElementById('statusInputText').value.trim();
+            const privacy = document.getElementById('statusPrivacySelect').value;
+            if (!statusText) {
+                alert("தயவுசெய்து ஸ்டேட்டஸ் வாசகத்தை உள்ளிடவும்!");
+                return;
+            }
+
+            const statusData = { text: statusText, privacy: privacy, timestamp: Date.now(), likes: 0 };
+            localStorage.setItem('pk_user_status', JSON.stringify(statusData));
+            document.getElementById('statusInputText').value = '';
+            alert("ஸ்டேட்டஸ் வெற்றிகரமாகப் பதிவேற்றப்பட்டது! (24 மணி நேரத்தில் மறையும்)");
+            loadMyStatusUI();
+        }
+
+        function loadMyStatusUI() {
+            const saved = localStorage.getItem('pk_user_status');
+            const ring = document.getElementById('myStatusRing');
+            const subText = document.getElementById('myStatusSubText');
+            if (!saved) {
+                ring.className = "status-ring no-status";
+                subText.innerText = "Tap to add status update (24h expiry)";
+                return;
+            }
+
+            const statusObj = JSON.parse(saved);
+            const now = Date.now();
+            const twentyFourHours = 24 * 60 * 60 * 1000;
+
+            if ((now - statusObj.timestamp) > twentyFourHours) {
+                localStorage.removeItem('pk_user_status');
+                ring.className = "status-ring no-status";
+                subText.innerText = "Status expired (24h limit reached)";
+            } else {
+                ring.className = "status-ring has-status";
+                subText.innerText = `Active: "${statusObj.text.substring(0, 18)}..." (${statusObj.privacy})`;
+            }
+        }
+
+        function openMyStatus() {
+            const saved = localStorage.getItem('pk_user_status');
+            if (!saved) {
+                alert("உங்களிடம் செயலில் உள்ள ஸ்டேட்டஸ் இல்லை!");
+                return;
+            }
+            const statusObj = JSON.parse(saved);
+            currentLikes = statusObj.likes || 0;
+            
+            document.getElementById('viewerName').innerText = "My Status (" + statusObj.privacy + ")";
+            document.getElementById('viewerTextContent').innerText = statusObj.text;
+            document.getElementById('statusLikeCount').innerText = currentLikes;
+            document.getElementById('statusViewer').style.display = 'flex';
+            runProgressBar();
+        }
+
+        function runProgressBar() {
+            const fill = document.getElementById('statusProgressFill');
+            fill.style.width = '0%';
+            setTimeout(() => { fill.style.width = '100%'; }, 50);
+        }
+
+        function likeCurrentStatus() {
+            currentLikes++;
+            document.getElementById('statusLikeCount').innerText = currentLikes;
+            const saved = localStorage.getItem('pk_user_status');
+            if(saved) {
+                let statusObj = JSON.parse(saved);
+                statusObj.likes = currentLikes;
+                localStorage.setItem('pk_user_status', JSON.stringify(statusObj));
+            }
+        }
+
+        function closeStatusViewer() {
+            document.getElementById('statusViewer').style.display = 'none';
+        }
+
+        function sendViberEmoji(emojiChar) {
+            const contentArea = document.getElementById('contentArea');
+            const floatEl = document.createElement('div');
+            floatEl.className = 'floating-emoji';
+            floatEl.innerText = emojiChar;
+            const randomX = Math.floor(Math.random() * 180) - 90;
+            floatEl.style.transform = `translateX(${randomX}px)`;
+            contentArea.appendChild(floatEl);
+            setTimeout(() => { floatEl.remove(); }, 1800);
+        }
+
+        function checkBirthday() {
+            const savedDob = localStorage.getItem('pk_chat_dob');
+            if (!savedDob) return;
+            const today = new Date();
+            const todayMD = String(today.getMonth() + 1).padStart(2, '0') + '-' + String(today.getDate()).padStart(2, '0');
+            if (todayMD === savedDob.substring(5, 10)) {
+                document.getElementById('birthdayGreetingBanner').style.display = 'block';
+            }
+        }
+
+        function loadUserReligionBroadcast() {
+            const religion = localStorage.getItem('pk_chat_religion');
+            const msgCard = document.getElementById('officialMessageCard');
+            if (!msgCard) return;
+            if(religion === 'hindu') msgCard.innerHTML = "🪔 பிகே சட் குடும்பத்தின் சார்பாக இனிய ஆன்மீக நல்வாழ்த்துகள்!";
+            else if(religion === 'christian') msgCard.innerHTML = "✨ PK Chat greetings: Wishing you peace and blessings!";
+            else if(religion === 'muslim') msgCard.innerHTML = "🌙 பிகே சட் தரப்பிலிருந்து இனிய நல்வாழ்த்துகள்!";
+            else if(religion === 'buddhist') msgCard.innerHTML = "☸️ பிகே சட் அமைதி மற்றும் இனிய நல்வாழ்த்துகள்!";
+            else msgCard.innerHTML = "🎉 அனைத்து பிகே சட் பயனர்களுக்கும் அன்பான இனிய வாழ்த்துகள்!";
+        }
+
+        function loadProfileInfo() {
+            const gmail = localStorage.getItem('pk_chat_gmail') || 'N/A';
+            const phone = localStorage.getItem('pk_chat_phone') || 'N/A';
+            const dob = localStorage.getItem('pk_chat_dob') || 'N/A';
+            const religion = localStorage.getItem('pk_chat_religion') || 'all';
+            
+            document.getElementById('profileDetails').innerHTML = `
+                📧 <b>Gmail:</b> ${gmail}<br>
+                📞 <b>Phone:</b> ${phone}<br>
+                🎂 <b>DOB:</b> ${dob}<br>
+                🌟 <b>Religion:</b> ${religion.toUpperCase()}<br>
+                🛡️ <b>Security:</b> Anti-Screenshot & Encrypted Active
+            `;
+
+            const editDob = document.getElementById('editDob');
+            const editReligion = document.getElementById('editReligion');
+            if(editDob && dob !== 'N/A') editDob.value = dob;
+            if(editReligion && religion) editReligion.value = religion;
+        }
+
+        function saveProfileEdits() {
+            const newDob = document.getElementById('editDob').value;
+            const newReligion = document.getElementById('editReligion').value;
+
+            if(!newDob || !newReligion) {
+                alert("தயவுசெய்து பிறந்த தேதி மற்றும் மதத்தைத் தேர்ந்தெடுக்கவும்!");
+                return;
+            }
+
+            localStorage.setItem('pk_chat_dob', newDob);
+            localStorage.setItem('pk_chat_religion', newReligion);
+            loadUserReligionBroadcast();
+            loadProfileInfo();
+            alert("பிரொஃபைல் விவரங்கள் (பிறந்த தேதி மற்றும் மதம்) வெற்றிகரமாக மாற்றப்பட்டு சேமிக்கப்பட்டது! 🌟");
+        }
+
+        function switchTab(tabName) {
+            document.querySelectorAll('.tab-content').forEach(el => el.classList.remove('active'));
+            document.querySelectorAll('.menu-item').forEach(el => el.classList.remove('active'));
+            
+            if(tabName === 'chats') {
+                document.getElementById('tab-chats').classList.add('active');
+                event.currentTarget.classList.add('active');
+            } else if(tabName === 'updates') {
+                document.getElementById('tab-updates').classList.add('active');
+                loadMyStatusUI();
+                event.currentTarget.classList.add('active');
+            } else if(tabName === 'sos') {
+                document.getElementById('tab-sos').classList.add('active');
+                event.currentTarget.classList.add('active');
+            } else if(tabName === 'calls') {
+                document.getElementById('tab-calls').classList.add('active');
+                event.currentTarget.classList.add('active');
+            } else if(tabName === 'profile') {
+                document.getElementById('tab-profile').classList.add('active');
+                loadProfileInfo();
+                event.currentTarget.classList.add('active');
+            }
+        }
+
+        function pressNum(num) { document.getElementById('dialNumber').value += num; }
+        function clearDial() { document.getElementById('dialNumber').value = ''; }
+        function backspaceDial() {
+            let val = document.getElementById('dialNumber').value;
+            document.getElementById('dialNumber').value = val.slice(0, -1);
+        }
+
+        function makeCall(callType) {
+            const num = document.getElementById('dialNumber').value;
+            if(!num) { alert("எண்ணைத் டயல் செய்யவும்!"); return; }
+            document.getElementById('callTypeLabel').innerText = `PK CHAT SECURE ${callType.toUpperCase()} CALL`;
+            document.getElementById('callNumberDisplay').innerText = num;
+            document.getElementById('callAvatarInitial').innerText = num.slice(-2);
+            document.getElementById('callStatusText').innerText = "Ringing (Secured)...";
+            document.getElementById('callTimer').style.display = 'none';
+            document.getElementById('callScreen').style.display = 'flex';
+            setTimeout(() => {
+                document.getElementById('callStatusText').innerText = "Connected & Encrypted";
+                document.getElementById('callTimer').style.display = 'block';
+            }, 2500);
+        }
+
+        function endCall() {
+            document.getElementById('callScreen').style.display = 'none';
+            document.getElementById('dialNumber').value = '';
+        }
+
+        function triggerSOS() {
+            alert("🚨 SOS Activated! 5-Hour Live GPS tracking & Emergency authorities notified with maximum security priority.");
+        }
+    </script>
+</body>
+</html>

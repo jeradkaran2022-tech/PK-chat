@@ -1,0 +1,110 @@
+name: PK CHAT AI Robot
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  inspect-and-fix:
+    name: PK CHAT Code Inspector
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Get Project
+        uses: actions/checkout@v4
+
+      - name: Install Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+
+      - name: Install Packages
+        run: flutter pub get
+
+      - name: Safe Automatic Fixes
+        run: dart fix --apply
+
+      - name: Format Dart Files
+        run: dart format lib
+
+      - name: Analyze Code
+        run: flutter analyze
+
+      - name: Run Tests
+        run: |
+          if find test -name '*_test.dart' -print -quit 2>/dev/null | grep -q .; then
+            flutter test
+          else
+            echo "No tests found. Add tests to improve safety."
+          fi
+
+  android-build:
+    needs: inspect-and-fix
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+      - uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+      - name: Bootstrap Android runner and apply PK Chat icons
+        run: |
+          if [ ! -d android ]; then
+            flutter create --platforms=android --project-name pk_chat .
+          fi
+          mkdir -p android/app/src/main/res
+          cp -r assets/app_icons/android/res/* android/app/src/main/res/
+      - run: flutter pub get
+      - run: flutter build apk --debug
+      - run: flutter build appbundle --debug
+      - uses: actions/upload-artifact@v4
+        with:
+          name: PK-CHAT-Android
+          if-no-files-found: warn
+          path: |
+            build/app/outputs/flutter-apk/*.apk
+            build/app/outputs/bundle/**/*.aab
+
+  ios-build:
+    needs: inspect-and-fix
+    runs-on: macos-latest
+
+    steps:
+      - uses: actions/checkout@v4
+      - uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+      - name: Bootstrap iOS runner and apply PK Chat AppIcon
+        run: |
+          if [ ! -d ios ]; then
+            flutter create --platforms=ios --project-name pk_chat .
+          fi
+          mkdir -p ios/Runner/Assets.xcassets/AppIcon.appiconset
+          cp -r assets/app_icons/ios/AppIcon.appiconset/* ios/Runner/Assets.xcassets/AppIcon.appiconset/
+          /usr/libexec/PlistBuddy -c "Set :CFBundleDisplayName PK Chat" ios/Runner/Info.plist || /usr/libexec/PlistBuddy -c "Add :CFBundleDisplayName string PK Chat" ios/Runner/Info.plist
+          /usr/libexec/PlistBuddy -c "Set :CFBundleName PK Chat" ios/Runner/Info.plist || true
+      - run: flutter pub get
+      - run: flutter build ios --no-codesign
+
+  windows-build:
+    needs: inspect-and-fix
+    runs-on: windows-latest
+
+    steps:
+      - uses: actions/checkout@v4
+      - uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+      - name: Bootstrap Windows runner if absent
+        shell: pwsh
+        run: |
+          if (-not (Test-Path windows)) {
+            flutter create --platforms=windows --project-name pk_chat .
+          }
+      - run: flutter pub get
+      - run: flutter build windows --debug

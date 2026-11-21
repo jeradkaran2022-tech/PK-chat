@@ -1,0 +1,491 @@
+import React, { useState, useCallback } from 'react';
+
+export default function PKChatApp() {
+  const [step, setStep] = useState('profile');
+  
+  // User Profile States
+  const [userName, setUserName] = useState('');
+  const [userEmail, setUserEmail] = useState('');
+  const [userPhone, setUserPhone] = useState('');
+  const [selectedLanguage, setSelectedLanguage] = useState('Tamil (Sri Lanka)');
+  
+  // Main App States
+  const [activeTab, setActiveTab] = useState('chats');
+  const [dialNumber, setDialNumber] = useState('');
+  const [savedContacts, setSavedContacts] = useState([
+    { id: 1, name: 'Jerad Karan', number: '717860693' }
+  ]);
+  
+  const [statusPrivacy, setStatusPrivacy] = useState('favorites');
+  const [statusText, setStatusText] = useState('');
+  const [statuses, setStatuses] = useState([
+    { id: 1, user: 'Jerad Karan', text: 'Online & Safe 🚀', privacy: 'favorites' }
+  ]);
+  
+  const [chatMessage, setChatMessage] = useState('');
+  const [fontStyle, setFontStyle] = useState('normal');
+  const [messages, setMessages] = useState([
+    { sender: 'Jerad Karan', text: 'Good Morning! ☀️', type: 'text' },
+    { sender: 'Jerad Karan', text: 'I Love You! 💖', type: 'text' },
+    { sender: 'Jerad Karan', text: 'Miss You! 💭', type: 'text' }
+  ]);
+
+  // Comprehensive Smart Keyword Animation State ('sun', 'hearts', 'miss', 'birthday', 'snow', null)
+  const [chatAnimation, setChatAnimation] = useState(null);
+  
+  const [isRecording, setIsRecording] = useState(false);
+  const [sosActive, setSosActive] = useState(false);
+  const [callActive, setCallActive] = useState(false);
+  const [callType, setCallType] = useState('');
+  const [beautyFilterActive, setBeautyFilterActive] = useState(false);
+  const [cameraFacing, setCameraFacing] = useState('front');
+
+  // Comprehensive Keyword Animation Trigger for ALL Important Words
+  const triggerAnimationEffect = (text) => {
+    const lower = text.toLowerCase();
+    if (lower.includes('morning') || lower.includes('குட் மார்னிங்')) {
+      setChatAnimation('sun');
+    } else if (lower.includes('love') || lower.includes('ஐ லவ் யூ') || lower.includes('❤️') || lower.includes('அன்பு')) {
+      setChatAnimation('hearts');
+    } else if (lower.includes('miss') || lower.includes('மிஸ் யூ') || lower.includes('நினைவு')) {
+      setChatAnimation('miss');
+    } else if (lower.includes('birthday') || lower.includes('பிறந்தநாள்') || lower.includes('வாழ்த்துகள்')) {
+      setChatAnimation('birthday');
+    } else if (lower.includes('cold') || lower.includes('குளிர்') || lower.includes('பனி')) {
+      setChatAnimation('snow');
+    }
+    setTimeout(() => setChatAnimation(null), 4000);
+  };
+
+  // Step 1: Profile
+  const handleProfileSubmit = (e) => {
+    e.preventDefault();
+    if (!userName || !userPhone) {
+      alert('தயவுசெய்து உங்கள் பெயர் மற்றும் தொலைபேசி எண்ணை உள்ளிடவும்!');
+      return;
+    }
+    setStep('language');
+  };
+
+  // Step 2: Language
+  const handleStartApp = () => {
+    setStep('main');
+  };
+
+  // Save Contact Feature
+  const handleSaveContact = () => {
+    if (!dialNumber) {
+      alert('சேமிக்க எண்களை டயல் பேடில் உள்ளிடவும்!');
+      return;
+    }
+    const name = prompt('இந்த எண்ணிற்கான பெயரை உள்ளிடவும் (Enter Contact Name):', 'My Contact');
+    if (!name) return;
+
+    setSavedContacts(prev => [...prev, { id: Date.now(), name, number: dialNumber }]);
+    alert(`தொலைபேசி எண் "${dialNumber}" (${name}) வெற்றிகரமாகச் சேமிக்கப்பட்டது!`);
+    setDialNumber('');
+  };
+
+  // Stylish Font Helper
+  const applyStylishFont = (text, style) => {
+    if (!text) return '';
+    if (style === 'bold') {
+      return text.split('').map(char => {
+        const code = char.charCodeAt(0);
+        if (code >= 65 && code <= 90) return String.fromCodePoint(code + 120276);
+        if (code >= 97 && code <= 122) return String.fromCodePoint(code + 120270);
+        return char;
+      }).join('');
+    } else if (style === 'fancy') {
+      return text.split('').map(char => {
+        const code = char.charCodeAt(0);
+        if (code >= 65 && code <= 90) return String.fromCodePoint(code + 120328);
+        if (code >= 97 && code <= 122) return String.fromCodePoint(code + 120322);
+        return char;
+      }).join('');
+    } else if (style === 'caps') {
+      return text.toUpperCase() + ' ✨';
+    }
+    return text;
+  };
+
+  // Status Upload & Gallery Download
+  const handleAddStatus = useCallback((e) => {
+    e.preventDefault();
+    if (!statusText.trim()) return;
+    setStatuses(prev => [...prev, { id: Date.now(), user: 'You', text: statusText, privacy: statusPrivacy }]);
+    setStatusText('');
+    alert('ஸ்டேட்டஸ் வெற்றிகரமாகப் பதிவிடப்பட்டது! (Cloud Storage Protected)');
+  }, [statusText, statusPrivacy]);
+
+  const handleDownloadToGallery = (statusTextItem) => {
+    alert(`"${statusTextItem}" உங்கள் மொபைல் கேலரியில் வெற்றிகரமாகச் சேமிக்கப்பட்டது!`);
+  };
+
+  const handleSendMessage = useCallback((e) => {
+    e.preventDefault();
+    if (!chatMessage.trim()) return;
+    const finalFormattedText = applyStylishFont(chatMessage, fontStyle);
+    
+    setMessages(prev => [...prev, { sender: 'You', text: finalFormattedText, type: 'text' }]);
+    triggerAnimationEffect(chatMessage);
+    setChatMessage('');
+  }, [chatMessage, fontStyle]);
+
+  // Voice Note Recording & Cross-Language Voice Translation Handler
+  const handleRecordVoiceNote = () => {
+    if (!isRecording) {
+      setIsRecording(true);
+      alert('🎙️ Voice Recording Started... Speak in your language. Tap again to send.');
+    } else {
+      setIsRecording(false);
+      setMessages(prev => [
+        ...prev, 
+        { sender: 'You', text: '🎤 Voice Note sent (Auto-Translated Audio)', type: 'voice' }
+      ]);
+      alert('✅ Voice Note successfully translated and delivered globally!');
+    }
+  };
+
+  const playTranslatedAudio = (msgText) => {
+    alert(`🔊 Playing Translated Voice Audio in ${selectedLanguage}: "${msgText}"`);
+  };
+
+  const startVideoCall = () => {
+    if (!dialNumber) { alert('முதலில் தொலைபேசி எண்ணை டயல் செய்யவும்!'); return; }
+    setCallType('Video Call (HD Face Clarity)');
+    setCallActive(true);
+    setBeautyFilterActive(true);
+    setCameraFacing('front');
+  };
+
+  const startAudioCall = () => {
+    if (!dialNumber) { alert('முதலில் தொலைபேசி எண்ணை டயல் செய்யவும்!'); return; }
+    setCallType('Audio Call');
+    setCallActive(true);
+    setBeautyFilterActive(false);
+  };
+
+  const toggleCamera = () => {
+    setCameraFacing(prev => (prev === 'front' ? 'back' : 'front'));
+  };
+
+  // 1. PROFILE SETUP
+  if (step === 'profile') {
+    return (
+      <div style={styles.authContainer}>
+        <div style={styles.authBox}>
+          <h2 style={{color: '#00a884'}}>PK CHAT - Profile Setup</h2>
+          <p style={{fontSize: '12px', color: '#aaa'}}>30-day free trial ($10/yr after)</p>
+          <form onSubmit={handleProfileSubmit} style={styles.authForm}>
+            <input type="text" placeholder="Full Name (e.g. Prasanth)" value={userName} onChange={(e) => setUserName(e.target.value)} style={styles.authInput} />
+            <input type="email" placeholder="Email Address" value={userEmail} onChange={(e) => setUserEmail(e.target.value)} style={styles.authInput} />
+            <input type="tel" placeholder="Phone Number (e.g. 717860693)" value={userPhone} onChange={(e) => setUserPhone(e.target.value)} style={styles.authInput} />
+            <button type="submit" style={styles.authBtn}>Next: Choose Language -&gt;</button>
+          </form>
+        </div>
+      </div>
+    );
+  }
+
+  // 2. LANGUAGE SELECTION
+  if (step === 'language') {
+    return (
+      <div style={styles.authContainer}>
+        <div style={styles.authBox}>
+          <h2 style={{color: '#00a884'}}>Choose Language</h2>
+          <p style={{fontSize: '12px', color: '#aaa'}}>Selected: {selectedLanguage}</p>
+          <div style={{display: 'flex', flexDirection: 'column', gap: '10px', margin: '20px 0'}}>
+            {['Tamil (Sri Lanka)', 'Tamil', 'English (India)', 'Sinhala'].map((lang) => (
+              <button key={lang} onClick={() => setSelectedLanguage(lang)} style={{padding: '10px', backgroundColor: selectedLanguage === lang ? '#00a884' : '#2a3942', color: '#fff', border: 'none', borderRadius: '5px', cursor: 'pointer', fontWeight: 'bold'}}>
+                {lang}
+              </button>
+            ))}
+          </div>
+          <button onClick={handleStartApp} style={styles.authBtn}>Start PK CHAT</button>
+        </div>
+      </div>
+    );
+  }
+
+  // 3. MAIN APP
+  return (
+    <div style={styles.container}>
+      <header style={styles.header}>
+        <div style={styles.logoRow}>
+          <h2 style={styles.logo}>PK CHAT</h2>
+          <span style={styles.trialBadge}>✨ 30-Day Free Trial ($10/yr)</span>
+        </div>
+        <nav style={styles.navTabs}>
+          {['chats', 'status', 'calls', 'alerts', '3d-emojis'].map((tab) => (
+            <button key={tab} onClick={() => setActiveTab(tab)} style={{...styles.tabButton, backgroundColor: activeTab === tab ? '#00a884' : 'transparent', color: activeTab === tab ? '#fff' : '#ddd'}}>
+              {tab === '3d-emojis' ? '🎁 3D EMOJIS' : tab.toUpperCase()}
+            </button>
+          ))}
+        </nav>
+      </header>
+
+      <main style={styles.content}>
+        
+        {/* CHATS TAB WITH ALL SMART KEYWORD ANIMATIONS & VOICE TRANSLATION */}
+        {activeTab === 'chats' && (
+          <div style={styles.viewSection}>
+            <h3>Chats, Smart Animations & Voice Translation</h3>
+            
+            {chatAnimation === 'sun' && (
+              <div style={styles.sunAnimationOverlay}>
+                <div style={styles.animationIcon}>☀️</div>
+                <span style={{color: '#ffcc00', fontWeight: 'bold', fontSize: '14px'}}>Good Morning! Sun Rising... 🌅</span>
+              </div>
+            )}
+            {chatAnimation === 'hearts' && (
+              <div style={styles.heartsAnimationOverlay}>
+                <div style={styles.animationIcon}>💖💕 💗 💓 ✨</div>
+                <span style={{color: '#ff3366', fontWeight: 'bold', fontSize: '14px'}}>I Love You! Endless Hearts... 🥰</span>
+              </div>
+            )}
+            {chatAnimation === 'miss' && (
+              <div style={styles.missAnimationOverlay}>
+                <div style={styles.animationIcon}>💭 🥺 ✨ 💫</div>
+                <span style={{color: '#00ffcc', fontWeight: 'bold', fontSize: '14px'}}>Miss You! Thinking of you... 💫</span>
+              </div>
+            )}
+            {chatAnimation === 'birthday' && (
+              <div style={styles.birthdayAnimationOverlay}>
+                <div style={styles.animationIcon}>🎂 🎈 🎉 🎁</div>
+                <span style={{color: '#ff9900', fontWeight: 'bold', fontSize: '14px'}}>Happy Birthday! Celebration... 🥳</span>
+              </div>
+            )}
+            {chatAnimation === 'snow' && (
+              <div style={styles.snowAnimationOverlay}>
+                <div style={styles.animationIcon}>❄️ 🌨️ 🧊 ❄️</div>
+                <span style={{color: '#00ffff', fontWeight: 'bold', fontSize: '14px'}}>Cold Weather! Snow Falling... ⛄</span>
+              </div>
+            )}
+
+            <div style={styles.styleSelectorRow}>
+              <span style={{fontSize: '12px', color: '#00ffcc'}}>Font Style:</span>
+              {['normal', 'bold', 'fancy', 'caps'].map((s) => (
+                <button key={s} onClick={() => setFontStyle(s)} style={{...styles.styleChip, backgroundColor: fontStyle === s ? '#00a884' : '#2a3942'}}>
+                  {s.toUpperCase()}
+                </button>
+              ))}
+            </div>
+
+            <div style={styles.chatBox}>
+              {messages.map((msg, index) => (
+                <div key={index} style={styles.chatBubble}>
+                  <strong>{msg.sender}:</strong> {msg.text}
+                  {msg.type === 'voice' && (
+                    <button onClick={() => playTranslatedAudio(msg.text)} style={styles.playAudioBtn}>
+                      ▶️ Play Translated Voice Note ({selectedLanguage})
+                    </button>
+                  )}
+                  <div style={styles.translationText}>🔄 Global Voice & Text Translated</div>
+                </div>
+              ))}
+            </div>
+
+            <div style={styles.inputForm}>
+              <input type="text" value={chatMessage} onChange={(e) => setChatMessage(e.target.value)} placeholder="Type 'Good Morning', 'Love', 'Miss You', 'Birthday', 'Cold'..." style={styles.inputField} />
+              <button onClick={handleSendMessage} style={styles.actionBtn}>Send</button>
+              <button 
+                onClick={handleRecordVoiceNote} 
+                style={{...styles.micBtn, backgroundColor: isRecording ? '#ff3b30' : '#007bff'}}
+                title="Tap to Record & Translate Voice"
+              >
+                {isRecording ? '🔴' : '🎙️'}
+              </button>
+            </div>
+          </div>
+        )}
+
+        {/* STATUS TAB */}
+        {activeTab === 'status' && (
+          <div style={styles.viewSection}>
+            <h3>Status Updates & Favorites Only Privacy</h3>
+            <p style={{fontSize: '11px', color: '#00ffcc'}}>Storage Protected: Cloud saved. Download to gallery if needed.</p>
+            <div style={styles.privacyBox}>
+              <label>Privacy: </label>
+              <select value={statusPrivacy} onChange={(e) => setStatusPrivacy(e.target.value)} style={styles.selectField}>
+                <option value="everyone">Everyone (அனைவரும்)</option>
+                <option value="contacts">My Contacts (நண்பர்கள்)</option>
+                <option value="favorites">Favorites Only (பிடித்த நபர்கள் - VIP)</option>
+              </select>
+            </div>
+            <form onSubmit={handleAddStatus} style={styles.inputForm}>
+              <input type="text" value={statusText} onChange={(e) => setStatusText(e.target.value)} placeholder="Share status..." style={styles.inputField} />
+              <button type="submit" style={styles.actionBtn}>Post</button>
+            </form>
+            <div style={styles.statusList}>
+              <h4>Recent Statuses:</h4>
+              {statuses.map((s) => (
+                <div key={s.id} style={styles.statusItem}>
+                  <div>
+                    <span>👤 {s.user}: {s.text}</span>
+                    <small style={{color: '#00ffcc', display: 'block'}}> [Privacy: {s.privacy}]</small>
+                  </div>
+                  <button onClick={() => handleDownloadToGallery(s.text)} style={styles.downloadBtn}>
+                    📥 Save to Gallery
+                  </button>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {/* CALLS TAB */}
+        {activeTab === 'calls' && (
+          <div style={styles.viewSection}>
+            <h3>📞 In-App Dial Pad, Save Contact & HD Calls</h3>
+            {!callActive ? (
+              <div style={styles.dialerScreen}>
+                <input type="text" value={dialNumber} placeholder="Enter or dial number..." readOnly style={styles.dialInput} />
+                
+                <div style={styles.keypadGrid}>
+                  {['1', '2', '3', '4', '5', '6', '7', '8', '9', '*', '0', '#'].map((digit) => (
+                    <button key={digit} onClick={() => setDialNumber(prev => prev + digit)} style={styles.digitBtn}>
+                      {digit}
+                    </button>
+                  ))}
+                </div>
+
+                <div style={styles.callActionRow}>
+                  <button style={styles.saveContactBtn} onClick={handleSaveContact}>💾 Save Contact</button>
+                  <button style={styles.clearBtn} onClick={() => setDialNumber('')}>Clear</button>
+                </div>
+
+                <div style={{marginTop: '15px', display: 'flex', justifyContent: 'center', gap: '10px'}}>
+                  <button style={styles.audioCallBtn} onClick={startAudioCall}>📞 Audio Call</button>
+                  <button style={styles.videoCallBtn} onClick={startVideoCall}>📹 HD Video Call</button>
+                </div>
+
+                <div style={{marginTop: '20px', textAlign: 'left', backgroundColor: '#111b21', padding: '10px', borderRadius: '5px'}}>
+                  <h4 style={{margin: '0 0 10px 0', color: '#00ffcc'}}>Saved Contacts:</h4>
+                  {savedContacts.map(c => (
+                    <div key={c.id} style={{display: 'flex', justifyContent: 'space-between', padding: '5px 0', borderBottom: '1px solid #2a3942'}}>
+                      <span>👤 {c.name}</span>
+                      <span style={{color: '#aaa'}}>{c.number}</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            ) : (
+              <div style={styles.activeCallScreen}>
+                <h2>Ongoing {callType}</h2>
+                <p>Connected to: <strong>{dialNumber}</strong></p>
+                <div style={{...styles.videoPreviewBox, filter: beautyFilterActive && cameraFacing === 'front' ? 'brightness(1.15) contrast(1.05) saturate(1.1)' : 'none'}}>
+                  <div style={styles.avatarPlaceholder}>
+                    {cameraFacing === 'front' ? '🤳 (Front Camera)' : '📸 (Back Camera)'}
+                  </div>
+                  <div style={styles.cameraBadge}>Active: {cameraFacing.toUpperCase()} CAMERA</div>
+                  {beautyFilterActive && cameraFacing === 'front' && (
+                    <div style={styles.beautyBadge}>✨ HD Face Clarity Active</div>
+                  )}
+                </div>
+                <div style={styles.callControlRow}>
+                  {callType.includes('Video') && (
+                    <button style={styles.switchCameraBtn} onClick={toggleCamera}>🔄 Switch Camera ({cameraFacing === 'front' ? 'Back' : 'Front'})</button>
+                  )}
+                  <button style={styles.endCallBtn} onClick={() => { setCallActive(false); setBeautyFilterActive(false); }}>🔴 End Call</button>
+                </div>
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* EMERGENCY SOS TAB */}
+        {activeTab === 'alerts' && (
+          <div style={styles.viewSection}>
+            <h3>Emergency SOS & Disaster Alerts</h3>
+            <p>5-Hour live GPS tracking, siren override, and regional disaster alerts.</p>
+            <button style={{...styles.sosBtn, backgroundColor: sosActive ? '#ff3b30' : '#28a745'}} onClick={() => { setSosActive(!sosActive); alert(sosActive ? 'SOS Deactivated' : '🚨 SOS Activated!'); }}>
+              {sosActive ? '🚨 SOS ACTIVE (Tap to Deactivate)' : '🚨 Trigger Emergency SOS'}
+            </button>
+          </div>
+        )}
+
+        {/* 3D EMOJIS TAB */}
+        {activeTab === '3d-emojis' && (
+          <div style={styles.viewSection}>
+            <h3>✨ 3D Emojis & Custom Greeting Cards</h3>
+            <p style={{fontSize: '12px', color: '#00ffcc'}}>Tap any card to send unique 3D greetings instantly!</p>
+            <div style={styles.card3dGrid}>
+              <div style={styles.card3dItem} onClick={() => setMessages(prev => [...prev, { sender: 'You', text: '🎂🎉 இனிய பிறந்தநாள் நல்வாழ்த்துகள்! Happy Birthday! 🎈🎁', type: 'text' }])}>
+                <div style={{fontSize: '28px'}}>🎂🎈</div>
+                <div style={{fontWeight: 'bold', fontSize: '13px', marginTop: '5px'}}>Happy Birthday Card</div>
+              </div>
+              <div style={styles.card3dItem} onClick={() => setMessages(prev => [...prev, { sender: 'You', text: '💖✨ அன்பு வாழ்த்துகள்! Lots of Love! 🌹✨', type: 'text' }])}>
+                <div style={{fontSize: '28px'}}>💖🌹</div>
+                <div style={{fontWeight: 'bold', fontSize: '13px', marginTop: '5px'}}>Love & Wishes 3D</div>
+              </div>
+            </div>
+          </div>
+        )}
+
+      </main>
+    </div>
+  );
+}
+
+// Styles
+const styles = {
+  authContainer: { display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100vh', backgroundColor: '#111b21' },
+  authBox: { backgroundColor: '#222d34', padding: '30px', borderRadius: '10px', width: '350px', textAlign: 'center', color: '#fff' },
+  authForm: { display: 'flex', flexDirection: 'column', gap: '15px', marginTop: '20px' },
+  authInput: { padding: '12px', borderRadius: '5px', border: 'none', backgroundColor: '#2a3942', color: '#fff', fontSize: '14px' },
+  authBtn: { backgroundColor: '#00a884', color: '#fff', border: 'none', padding: '12px', borderRadius: '5px', fontSize: '16px', fontWeight: 'bold', cursor: 'pointer' },
+  container: { fontFamily: 'Segoe UI, Tahoma, Geneva, Verdana, sans-serif', backgroundColor: '#111b21', color: '#e9edef', minHeight: '100vh', padding: '10px' },
+  header: { backgroundColor: '#202c33', padding: '15px', borderRadius: '8px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '10px' },
+  logoRow: { display: 'flex', alignItems: 'center', gap: '15px' },
+  logo: { margin: 0, color: '#00a884', letterSpacing: '1px' },
+  trialBadge: { backgroundColor: 'rgba(0, 168, 132, 0.2)', color: '#00ffcc', padding: '4px 8px', borderRadius: '4px', fontSize: '11px', fontWeight: 'bold' },
+  navTabs: { display: 'flex', gap: '5px', flexWrap: 'wrap' },
+  tabButton: { border: 'none', padding: '6px 10px', borderRadius: '5px', cursor: 'pointer', fontWeight: 'bold', fontSize: '11px' },
+  content: { marginTop: '15px', padding: '10px' },
+  viewSection: { backgroundColor: '#222d34', padding: '20px', borderRadius: '8px', maxWidth: '600px', margin: '0 auto', position: 'relative', overflow: 'hidden' },
+  
+  // Animation Overlays
+  sunAnimationOverlay: { position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(255, 204, 0, 0.25)', display: 'flex', flexDirection: 'column', justifyContent: 'center', alignItems: 'center', zIndex: 10 },
+  heartsAnimationOverlay: { position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(255, 51, 102, 0.25)', display: 'flex', flexDirection: 'column', justifyContent: 'center', alignItems: 'center', zIndex: 10 },
+  missAnimationOverlay: { position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(0, 255, 204, 0.2)', display: 'flex', flexDirection: 'column', justifyContent: 'center', alignItems: 'center', zIndex: 10 },
+  birthdayAnimationOverlay: { position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(255, 153, 0, 0.25)', display: 'flex', flexDirection: 'column', justifyContent: 'center', alignItems: 'center', zIndex: 10 },
+  snowAnimationOverlay: { position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(0, 255, 255, 0.2)', display: 'flex', flexDirection: 'column', justifyContent: 'center', alignItems: 'center', zIndex: 10 },
+  animationIcon: { fontSize: '50px' },
+
+  styleSelectorRow: { display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '10px' },
+  styleChip: { border: 'none', padding: '4px 8px', borderRadius: '4px', color: '#fff', fontSize: '10px', fontWeight: 'bold', cursor: 'pointer' },
+  chatBox: { backgroundColor: '#0b141a', height: '180px', overflowY: 'auto', padding: '10px', borderRadius: '5px', marginBottom: '10px' },
+  chatBubble: { backgroundColor: '#005c4b', padding: '8px 12px', borderRadius: '8px', marginBottom: '8px', maxWidth: '85%' },
+  translationText: { fontSize: '11px', color: '#00ffcc', marginTop: '4px' },
+  playAudioBtn: { backgroundColor: '#ffc107', color: '#000', border: 'none', padding: '6px 10px', borderRadius: '4px', fontSize: '11px', fontWeight: 'bold', cursor: 'pointer', marginTop: '6px', display: 'block' },
+  inputForm: { display: 'flex', gap: '8px', alignItems: 'center' },
+  inputField: { flex: 1, padding: '10px', borderRadius: '5px', border: 'none', backgroundColor: '#2a3942', color: '#fff' },
+  actionBtn: { backgroundColor: '#00a884', color: '#fff', border: 'none', padding: '10px 12px', borderRadius: '5px', cursor: 'pointer', fontWeight: 'bold', fontSize: '12px' },
+  micBtn: { color: '#fff', border: 'none', padding: '10px 12px', borderRadius: '5px', cursor: 'pointer', fontWeight: 'bold', fontSize: '12px' },
+  privacyBox: { marginBottom: '15px' },
+  selectField: { padding: '8px', borderRadius: '5px', backgroundColor: '#2a3942', color: '#fff', border: 'none', marginLeft: '10px' },
+  statusList: { marginTop: '15px' },
+  statusItem: { backgroundColor: '#2a3942', padding: '10px', borderRadius: '5px', marginBottom: '8px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' },
+  downloadBtn: { backgroundColor: '#007bff', color: '#fff', border: 'none', padding: '6px 10px', borderRadius: '4px', fontSize: '11px', cursor: 'pointer', fontWeight: 'bold' },
+  dialerScreen: { textAlign: 'center' },
+  dialInput: { width: '80%', padding: '12px', fontSize: '18px', textAlign: 'center', borderRadius: '5px', border: 'none', backgroundColor: '#2a3942', color: '#fff', marginBottom: '15px' },
+  keypadGrid: { display: 'grid', gridTemplateColumns: 'repeat(3, 60px)', gap: '8px', justifyContent: 'center', marginBottom: '15px' },
+  digitBtn: { padding: '12px', fontSize: '16px', backgroundColor: '#2a3942', color: '#fff', border: 'none', borderRadius: '50px', cursor: 'pointer' },
+  callActionRow: { display: 'flex', justifyContent: 'center', gap: '8px', marginBottom: '10px' },
+  saveContactBtn: { backgroundColor: '#17a2b8', color: '#fff', border: 'none', padding: '10px 15px', borderRadius: '5px', cursor: 'pointer', fontWeight: 'bold' },
+  clearBtn: { backgroundColor: '#dc3545', color: '#fff', border: 'none', padding: '10px 15px', borderRadius: '5px', cursor: 'pointer', fontWeight: 'bold' },
+  audioCallBtn: { backgroundColor: '#28a745', color: '#fff', border: 'none', padding: '10px 15px', borderRadius: '5px', cursor: 'pointer', fontWeight: 'bold' },
+  videoCallBtn: { backgroundColor: '#007bff', color: '#fff', border: 'none', padding: '10px 15px', borderRadius: '5px', cursor: 'pointer', fontWeight: 'bold' },
+  activeCallScreen: { textAlign: 'center', padding: '15px' },
+  videoPreviewBox: { backgroundColor: '#0b141a', height: '180px', borderRadius: '8px', display: 'flex', flexDirection: 'column', justifyContent: 'center', alignItems: 'center', margin: '10px 0', position: 'relative' },
+  avatarPlaceholder: { fontSize: '16px', color: '#fff', fontWeight: 'bold' },
+  cameraBadge: { position: 'absolute', top: '10px', left: '10px', backgroundColor: 'rgba(0, 0, 0, 0.6)', color: '#00ffcc', padding: '3px 8px', borderRadius: '4px', fontSize: '10px', fontWeight: 'bold' },
+  beautyBadge: { position: 'absolute', bottom: '10px', backgroundColor: 'rgba(0, 168, 132, 0.9)', color: '#fff', padding: '4px 8px', borderRadius: '4px', fontSize: '11px', fontWeight: 'bold' },
+  callControlRow: { display: 'flex', justifyContent: 'center', gap: '10px', marginTop: '15px' },
+  switchCameraBtn: { backgroundColor: '#6c757d', color: '#fff', border: 'none', padding: '10px 15px', borderRadius: '5px', fontSize: '14px', cursor: 'pointer', fontWeight: 'bold' },
+  endCallBtn: { backgroundColor: '#ff3b30', color: '#fff', border: 'none', padding: '10px 20px', borderRadius: '5px', fontSize: '14px', cursor: 'pointer', fontWeight: 'bold' },
+  sosBtn: { width: '100%', padding: '15px', color: '#fff', border: 'none', borderRadius: '5px', fontSize: '15px', cursor: 'pointer', fontWeight: 'bold' },
+  card3dGrid: { display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '10px', marginTop: '15px' },
+  card3dItem: { backgroundColor: '#2a3942', padding: '15px', borderRadius: '8px', textAlign: 'center', cursor: 'pointer', border: '1px solid #00a884', boxShadow: '0 4px 8px rgba(0,0,0,0.3)' }
+};

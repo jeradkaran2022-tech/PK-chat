@@ -1,0 +1,953 @@
+{
+  "entities": {
+    "UserAccount": {
+      "title": "UserAccount",
+      "description": "Private user account identity and PII isolated from public directory profiles.",
+      "type": "object",
+      "properties": {
+        "uid": { "type": "string", "maxLength": 128, "pattern": "^[a-zA-Z0-9_\\-]+$" },
+        "phoneNumber": { "type": "string", "maxLength": 32 },
+        "email": { "type": "string", "maxLength": 254 },
+        "country": { "type": "string", "maxLength": 80 },
+        "countryDialCode": { "type": "string", "maxLength": 10 },
+        "recoveryEmail": { "type": "string", "maxLength": 254 },
+        "phoneDiscoveryEnabled": { "type": "boolean" },
+        "accountStatus": { "type": "string", "enum": ["active", "suspended", "deleted"] },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "updatedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["uid", "country", "countryDialCode", "accountStatus", "createdAt", "updatedAt"]
+    },
+    "UserProfile": {
+      "title": "UserProfile",
+      "description": "Public-safe user profile without phone or email PII.",
+      "type": "object",
+      "properties": {
+        "uid": { "type": "string", "maxLength": 128, "pattern": "^[a-zA-Z0-9_\\-]+$" },
+        "fullName": { "type": "string", "minLength": 1, "maxLength": 100 },
+        "about": { "type": "string", "maxLength": 140 },
+        "bio": { "type": "string", "maxLength": 300 },
+        "statusMessage": { "type": "string", "maxLength": 100 },
+        "avatarUrl": { "type": "string", "maxLength": 200000 },
+        "coverImageUrl": { "type": "string", "maxLength": 300000 },
+        "country": { "type": "string", "maxLength": 80 },
+        "countryCode": { "type": "string", "maxLength": 8 },
+        "preferredLanguage": { "type": "string", "minLength": 2, "maxLength": 16 },
+        "preferredLanguageName": { "type": "string", "maxLength": 64 },
+        "profileVisibility": { "type": "string", "enum": ["everyone", "contacts", "nobody"] },
+        "profilePhotoVisibility": { "type": "string", "enum": ["everyone", "contacts", "nobody"] },
+        "aboutVisibility": { "type": "string", "enum": ["everyone", "contacts", "nobody"] },
+        "blockedUserIds": { "type": "array" },
+        "e2eePublicKey": { "type": "string", "maxLength": 1024 },
+        "onlineStatus": { "type": "string", "enum": ["online", "away", "offline"] },
+        "onlineSince": { "type": "string", "format": "date-time" },
+        "lastSeen": { "type": "string", "format": "date-time" },
+        "lastSeenVisibility": { "type": "string", "enum": ["everyone", "contacts", "nobody"] },
+        "onlineVisibility": { "type": "string", "enum": ["everyone", "same_as_last_seen"] },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "updatedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["uid", "fullName", "country", "countryCode", "preferredLanguage", "preferredLanguageName", "onlineStatus", "createdAt", "updatedAt"]
+    },
+    "UserDevice": {
+      "title": "UserDevice",
+      "description": "Trusted device registration for avoiding repeated OTP prompts on the same device.",
+      "type": "object",
+      "properties": {
+        "deviceId": { "type": "string", "maxLength": 128, "pattern": "^[a-zA-Z0-9_\\-]+$" },
+        "userId": { "type": "string", "maxLength": 128, "pattern": "^[a-zA-Z0-9_\\-]+$" },
+        "deviceName": { "type": "string", "maxLength": 120 },
+        "platform": { "type": "string", "maxLength": 40 },
+        "trusted": { "type": "boolean" },
+        "otpVerifiedAt": { "type": "string", "format": "date-time" },
+        "lastActiveAt": { "type": "string", "format": "date-time" },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["deviceId", "userId", "deviceName", "platform", "trusted", "createdAt"]
+    },
+    "LanguagePreference": {
+      "title": "LanguagePreference",
+      "description": "Independent preferred language and translation behavior settings.",
+      "type": "object",
+      "properties": {
+        "userId": { "type": "string", "maxLength": 128, "pattern": "^[a-zA-Z0-9_\\-]+$" },
+        "primaryLanguage": { "type": "string", "maxLength": 16 },
+        "primaryLanguageName": { "type": "string", "maxLength": 64 },
+        "autoDetect": { "type": "boolean" },
+        "preserveOriginal": { "type": "boolean" },
+        "defaultViewMode": { "type": "string", "enum": ["translated", "original", "bilingual"] },
+        "voiceTranslationEnabled": { "type": "boolean" },
+        "ttsVoice": { "type": "string", "enum": ["Kore", "Puck", "Charon", "Fenrir", "Zephyr"] },
+        "updatedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["userId", "primaryLanguage", "primaryLanguageName", "autoDetect", "preserveOriginal", "defaultViewMode", "voiceTranslationEnabled", "ttsVoice", "updatedAt"]
+    },
+    "Contact": {
+      "title": "Contact",
+      "description": "User address book entry with block and report controls.",
+      "type": "object",
+      "properties": {
+        "ownerId": { "type": "string", "maxLength": 128, "pattern": "^[a-zA-Z0-9_\\-]+$" },
+        "contactUid": { "type": "string", "maxLength": 128, "pattern": "^[a-zA-Z0-9_\\-]+$" },
+        "displayName": { "type": "string", "maxLength": 100 },
+        "phoneMasked": { "type": "string", "maxLength": 32 },
+        "country": { "type": "string", "maxLength": 80 },
+        "preferredLanguage": { "type": "string", "maxLength": 16 },
+        "preferredLanguageName": { "type": "string", "maxLength": 64 },
+        "blocked": { "type": "boolean" },
+        "reported": { "type": "boolean" },
+        "reportReason": { "type": "string", "maxLength": 300 },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "updatedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["ownerId", "contactUid", "displayName", "country", "preferredLanguage", "blocked", "reported", "createdAt", "updatedAt"]
+    },
+    "DirectChat": {
+      "title": "DirectChat",
+      "description": "One-to-one chat thread between two participants.",
+      "type": "object",
+      "properties": {
+        "chatId": { "type": "string", "maxLength": 128, "pattern": "^[a-zA-Z0-9_\\-]+$" },
+        "participantIds": { "type": "array" },
+        "createdBy": { "type": "string", "maxLength": 128, "pattern": "^[a-zA-Z0-9_\\-]+$" },
+        "title": { "type": "string", "maxLength": 120 },
+        "lastMessage": { "type": "string", "maxLength": 500 },
+        "lastSenderId": { "type": "string", "maxLength": 128 },
+        "typingUserId": { "type": "string", "maxLength": 128 },
+        "wallpaperId": { "type": "string", "maxLength": 128 },
+        "e2eeEnabled": { "type": "boolean" },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "updatedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["chatId", "participantIds", "createdBy", "e2eeEnabled", "createdAt", "updatedAt"]
+    },
+    "GroupChat": {
+      "title": "GroupChat",
+      "description": "Multi-recipient group chat where each member receives messages in their own preferred language.",
+      "type": "object",
+      "properties": {
+        "groupId": { "type": "string", "maxLength": 128, "pattern": "^[a-zA-Z0-9_\\-]+$" },
+        "name": { "type": "string", "minLength": 1, "maxLength": 120 },
+        "description": { "type": "string", "maxLength": 300 },
+        "createdBy": { "type": "string", "maxLength": 128, "pattern": "^[a-zA-Z0-9_\\-]+$" },
+        "memberIds": { "type": "array" },
+        "adminIds": { "type": "array" },
+        "lastMessage": { "type": "string", "maxLength": 500 },
+        "lastSenderId": { "type": "string", "maxLength": 128 },
+        "wallpaperId": { "type": "string", "maxLength": 128 },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "updatedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["groupId", "name", "createdBy", "memberIds", "adminIds", "createdAt", "updatedAt"]
+    },
+    "ChatMessage": {
+      "title": "ChatMessage",
+      "description": "Message inside a direct or group chat preserving original text and optional E2EE ciphertext.",
+      "type": "object",
+      "properties": {
+        "messageId": { "type": "string", "maxLength": 128, "pattern": "^[a-zA-Z0-9_\\-]+$" },
+        "chatId": { "type": "string", "maxLength": 128, "pattern": "^[a-zA-Z0-9_\\-]+$" },
+        "chatType": { "type": "string", "enum": ["direct", "group"] },
+        "participantIds": { "type": "array" },
+        "senderId": { "type": "string", "maxLength": 128, "pattern": "^[a-zA-Z0-9_\\-]+$" },
+        "senderName": { "type": "string", "maxLength": 100 },
+        "senderLanguage": { "type": "string", "maxLength": 16 },
+        "messageType": { "type": "string", "enum": ["text", "image", "video", "document", "voice", "sticker"] },
+        "originalText": { "type": "string", "maxLength": 10000 },
+        "encryptedPayload": { "type": "string", "maxLength": 16000 },
+        "e2eeEnabled": { "type": "boolean" },
+        "mediaName": { "type": "string", "maxLength": 255 },
+        "mediaMimeType": { "type": "string", "maxLength": 100 },
+        "mediaPreviewData": { "type": "string", "maxLength": 350000 },
+        "replyToId": { "type": "string", "maxLength": 128 },
+        "replyToText": { "type": "string", "maxLength": 300 },
+        "forwardedFrom": { "type": "string", "maxLength": 100 },
+        "burnAfterSeconds": { "type": "integer" },
+        "expiresAtMs": { "type": "integer" },
+        "deleted": { "type": "boolean" },
+        "deliveredTo": { "type": "array" },
+        "readBy": { "type": "array" },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "updatedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["messageId", "chatId", "chatType", "participantIds", "senderId", "senderName", "senderLanguage", "messageType", "originalText", "e2eeEnabled", "deleted", "createdAt", "updatedAt"]
+    },
+    "TranslatedMessage": {
+      "title": "TranslatedMessage",
+      "description": "Per-recipient translated rendering of a chat message.",
+      "type": "object",
+      "properties": {
+        "messageId": { "type": "string", "maxLength": 128, "pattern": "^[a-zA-Z0-9_\\-]+$" },
+        "chatId": { "type": "string", "maxLength": 128, "pattern": "^[a-zA-Z0-9_\\-]+$" },
+        "targetUserId": { "type": "string", "maxLength": 128, "pattern": "^[a-zA-Z0-9_\\-]+$" },
+        "participantIds": { "type": "array" },
+        "sourceLanguage": { "type": "string", "maxLength": 16 },
+        "targetLanguage": { "type": "string", "maxLength": 16 },
+        "translatedText": { "type": "string", "maxLength": 12000 },
+        "engine": { "type": "string", "maxLength": 64 },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["messageId", "chatId", "targetUserId", "participantIds", "sourceLanguage", "targetLanguage", "translatedText", "engine", "createdAt"]
+    },
+    "CallRecord": {
+      "title": "CallRecord",
+      "description": "WebRTC voice and video call signaling and session metadata.",
+      "type": "object",
+      "properties": {
+        "callId": { "type": "string", "maxLength": 128, "pattern": "^[a-zA-Z0-9_\\-]+$" },
+        "callerId": { "type": "string", "maxLength": 128, "pattern": "^[a-zA-Z0-9_\\-]+$" },
+        "callerName": { "type": "string", "maxLength": 100 },
+        "participantIds": { "type": "array" },
+        "callType": { "type": "string", "enum": ["audio", "video"] },
+        "status": { "type": "string", "enum": ["ringing", "active", "ended", "missed"] },
+        "sourceLanguage": { "type": "string", "maxLength": 16 },
+        "targetLanguage": { "type": "string", "maxLength": 16 },
+        "durationSeconds": { "type": "integer" },
+        "offerSdp": { "type": "string", "maxLength": 32000 },
+        "answerSdp": { "type": "string", "maxLength": 32000 },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "updatedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["callId", "callerId", "callerName", "participantIds", "callType", "status", "sourceLanguage", "targetLanguage", "durationSeconds", "createdAt", "updatedAt"]
+    },
+    "UserSettings": {
+      "title": "UserSettings",
+      "description": "Appearance, privacy, and app lock settings per user.",
+      "type": "object",
+      "properties": {
+        "userId": { "type": "string", "maxLength": 128, "pattern": "^[a-zA-Z0-9_\\-]+$" },
+        "theme": { "type": "string", "enum": ["light", "dark", "system"] },
+        "bubbleColor": { "type": "string", "maxLength": 32 },
+        "wallpaperId": { "type": "string", "maxLength": 128 },
+        "customWallpaperData": { "type": "string", "maxLength": 350000 },
+        "pinLockEnabled": { "type": "boolean" },
+        "appLockPinHash": { "type": "string", "maxLength": 128 },
+        "biometricEnabled": { "type": "boolean" },
+        "readReceipts": { "type": "boolean" },
+        "lastSeenVisible": { "type": "boolean" },
+        "lastSeenVisibility": { "type": "string", "enum": ["everyone", "contacts", "nobody"] },
+        "onlineVisibility": { "type": "string", "enum": ["everyone", "same_as_last_seen"] },
+        "notificationsEnabled": { "type": "boolean" },
+        "voiceSecurityAlertsEnabled": { "type": "boolean" },
+        "appLanguage": { "type": "string", "minLength": 2, "maxLength": 16 },
+        "appLanguageName": { "type": "string", "maxLength": 64 },
+        "autoFestivalGreetEnabled": { "type": "boolean" },
+        "updatedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["userId", "theme", "bubbleColor", "wallpaperId", "pinLockEnabled", "biometricEnabled", "readReceipts", "lastSeenVisible", "notificationsEnabled", "updatedAt"]
+    },
+    "Wallpaper": {
+      "title": "Wallpaper",
+      "description": "Built-in and user custom wallpaper presets.",
+      "type": "object",
+      "properties": {
+        "wallpaperId": { "type": "string", "maxLength": 128, "pattern": "^[a-zA-Z0-9_\\-]+$" },
+        "title": { "type": "string", "maxLength": 80 },
+        "category": { "type": "string", "enum": ["nature", "flowers", "ocean", "mountains", "abstract", "romantic", "custom"] },
+        "imageUrl": { "type": "string", "maxLength": 350000 },
+        "isBuiltIn": { "type": "boolean" },
+        "ownerId": { "type": "string", "maxLength": 128 },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["wallpaperId", "title", "category", "imageUrl", "isBuiltIn", "ownerId", "createdAt"]
+    },
+    "Subscription": {
+      "title": "Subscription",
+      "description": "Subscription status and 30-day free trial tracking followed by $10 USD annual renewal without storing payment card credentials.",
+      "type": "object",
+      "properties": {
+        "userId": { "type": "string", "maxLength": 128, "pattern": "^[a-zA-Z0-9_\\-]+$" },
+        "plan": { "type": "string", "enum": ["trial", "pro_monthly", "free"] },
+        "status": { "type": "string", "enum": ["trialing", "active", "cancelled", "expired"] },
+        "monthlyPriceUsd": { "type": "number" },
+        "autoRenew": { "type": "boolean" },
+        "paymentMode": { "type": "string", "enum": ["test"] },
+        "trialStartAt": { "type": "string", "format": "date-time" },
+        "trialEndAt": { "type": "string", "format": "date-time" },
+        "currentPeriodEnd": { "type": "string", "format": "date-time" },
+        "updatedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["userId", "plan", "status", "monthlyPriceUsd", "autoRenew", "paymentMode", "updatedAt"]
+    },
+    "PaymentRecord": {
+      "title": "PaymentRecord",
+      "description": "Itemized test-mode billing history without card numbers or CVV.",
+      "type": "object",
+      "properties": {
+        "paymentId": { "type": "string", "maxLength": 128, "pattern": "^[a-zA-Z0-9_\\-]+$" },
+        "userId": { "type": "string", "maxLength": 128, "pattern": "^[a-zA-Z0-9_\\-]+$" },
+        "amountUsd": { "type": "number" },
+        "currency": { "type": "string", "maxLength": 8 },
+        "status": { "type": "string", "enum": ["succeeded_test", "refunded_test", "failed_test"] },
+        "provider": { "type": "string", "enum": ["test_mode_gateway", "google_play_test", "apple_iap_test"] },
+        "description": { "type": "string", "maxLength": 200 },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["paymentId", "userId", "amountUsd", "currency", "status", "provider", "description", "createdAt"]
+    },
+    "EmergencyContact": {
+      "title": "EmergencyContact",
+      "description": "Trusted SOS emergency contact configured by the user.",
+      "type": "object",
+      "properties": {
+        "userId": { "type": "string", "maxLength": 128, "pattern": "^[a-zA-Z0-9_\\-]+$" },
+        "name": { "type": "string", "maxLength": 100 },
+        "phone": { "type": "string", "maxLength": 32 },
+        "relationship": { "type": "string", "maxLength": 64 },
+        "countryCode": { "type": "string", "maxLength": 8 },
+        "notifyOnSos": { "type": "boolean" },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["userId", "name", "phone", "relationship", "countryCode", "notifyOnSos", "createdAt"]
+    },
+    "SosAlert": {
+      "title": "SosAlert",
+      "description": "User-generated SOS emergency alert clearly distinguished from official emergency service notifications.",
+      "type": "object",
+      "properties": {
+        "alertId": { "type": "string", "maxLength": 128, "pattern": "^[a-zA-Z0-9_\\-]+$" },
+        "userId": { "type": "string", "maxLength": 128, "pattern": "^[a-zA-Z0-9_\\-]+$" },
+        "userName": { "type": "string", "maxLength": 100 },
+        "status": { "type": "string", "enum": ["active", "resolved", "cancelled"] },
+        "alertOrigin": { "type": "string", "enum": ["user_generated"] },
+        "emergencyServicesNotified": { "type": "boolean" },
+        "shareLiveLocation": { "type": "boolean" },
+        "latitude": { "type": "number" },
+        "longitude": { "type": "number" },
+        "note": { "type": "string", "maxLength": 300 },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "updatedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["alertId", "userId", "userName", "status", "alertOrigin", "emergencyServicesNotified", "shareLiveLocation", "createdAt", "updatedAt"]
+    },
+    "DisasterAlert": {
+      "title": "DisasterAlert",
+      "description": "Verified official disaster alert synced from public agencies or verified by authorized admins.",
+      "type": "object",
+      "properties": {
+        "alertId": { "type": "string", "maxLength": 128, "pattern": "^[a-zA-Z0-9_\\-]+$" },
+        "hazardType": { "type": "string", "enum": ["flood", "tsunami", "earthquake", "severe_weather", "cyclone", "landslide", "wildfire"] },
+        "title": { "type": "string", "maxLength": 160 },
+        "officialSource": { "type": "string", "maxLength": 120 },
+        "sourceUrl": { "type": "string", "maxLength": 512 },
+        "location": { "type": "string", "maxLength": 160 },
+        "country": { "type": "string", "maxLength": 80 },
+        "latitude": { "type": "number" },
+        "longitude": { "type": "number" },
+        "distanceKm": { "type": "number" },
+        "severity": { "type": "string", "enum": ["advisory", "watch", "warning", "extreme"] },
+        "issuedAt": { "type": "string", "format": "date-time" },
+        "expiresAt": { "type": "string", "format": "date-time" },
+        "status": { "type": "string", "enum": ["active", "monitoring", "resolved"] },
+        "verifiedOfficial": { "type": "boolean" },
+        "shelterAdvice": { "type": "string", "maxLength": 500 },
+        "evacuationInstructions": { "type": "string", "maxLength": 500 }
+      },
+      "required": ["alertId", "hazardType", "title", "officialSource", "location", "severity", "issuedAt", "status", "verifiedOfficial"]
+    },
+    "NotificationItem": {
+      "title": "NotificationItem",
+      "description": "In-app notification entry for messages, SOS updates, and system notices.",
+      "type": "object",
+      "properties": {
+        "userId": { "type": "string", "maxLength": 128, "pattern": "^[a-zA-Z0-9_\\-]+$" },
+        "category": { "type": "string", "enum": ["message", "call", "sos", "disaster", "billing", "security"] },
+        "title": { "type": "string", "maxLength": 120 },
+        "body": { "type": "string", "maxLength": 300 },
+        "read": { "type": "boolean" },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["userId", "category", "title", "body", "read", "createdAt"]
+    },
+    "SecurityLog": {
+      "title": "SecurityLog",
+      "description": "Audit log of authentication, device trust, OTP, and security events.",
+      "type": "object",
+      "properties": {
+        "userId": { "type": "string", "maxLength": 128, "pattern": "^[a-zA-Z0-9_\\-]+$" },
+        "eventType": { "type": "string", "maxLength": 64 },
+        "severity": { "type": "string", "enum": ["info", "warning", "critical"] },
+        "deviceId": { "type": "string", "maxLength": 128 },
+        "detail": { "type": "string", "maxLength": 400 },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["userId", "eventType", "severity", "detail", "createdAt"]
+    },
+    "AdminUser": {
+      "title": "AdminUser",
+      "description": "Authorized administrator registry.",
+      "type": "object",
+      "properties": {
+        "uid": { "type": "string", "maxLength": 128, "pattern": "^[a-zA-Z0-9_\\-]+$" },
+        "email": { "type": "string", "maxLength": 254 },
+        "role": { "type": "string", "enum": ["owner", "security_admin", "support_admin"] },
+        "mfaVerified": { "type": "boolean" },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["uid", "email", "role", "mfaVerified", "createdAt"]
+    },
+    "ScheduledPost": {
+      "title": "ScheduledPost",
+      "description": "Scheduled chat wish or status post delivered at a future timestamp.",
+      "type": "object",
+      "properties": {
+        "senderId": { "type": "string", "maxLength": 128, "pattern": "^[a-zA-Z0-9_\\-]+$" },
+        "postType": { "type": "string", "enum": ["chat_wish", "status"] },
+        "receiverId": { "type": "string", "maxLength": 128 },
+        "chatId": { "type": "string", "maxLength": 128 },
+        "message": { "type": "string", "maxLength": 2000 },
+        "emojiKey": { "type": "string", "maxLength": 64 },
+        "mediaUrl": { "type": "string", "maxLength": 2048 },
+        "wishTime": { "type": "string", "format": "date-time" },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "status": { "type": "string", "enum": ["pending", "sent", "cancelled"] }
+      },
+      "required": ["senderId", "postType", "receiverId", "chatId", "message", "emojiKey", "mediaUrl", "wishTime", "createdAt", "status"]
+    },
+    "PhoneDirectoryEntry": {
+      "title": "PhoneDirectoryEntry",
+      "description": "One-way SHA-256 hashed phone lookup entry without raw phone PII, opt-in and cancellable by owner.",
+      "type": "object",
+      "properties": {
+        "phoneHash": { "type": "string", "minLength": 64, "maxLength": 64, "pattern": "^[a-f0-9]+$" },
+        "userId": { "type": "string", "maxLength": 128, "pattern": "^[a-zA-Z0-9_\\-]+$" },
+        "fullName": { "type": "string", "minLength": 1, "maxLength": 100 },
+        "country": { "type": "string", "maxLength": 80 },
+        "preferredLanguage": { "type": "string", "maxLength": 16 },
+        "preferredLanguageName": { "type": "string", "maxLength": 64 },
+        "discoverable": { "type": "boolean" },
+        "updatedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["phoneHash", "userId", "fullName", "country", "preferredLanguage", "preferredLanguageName", "discoverable", "updatedAt"]
+    },
+    "ContactRequest": {
+      "title": "ContactRequest",
+      "description": "Consent-based connection request between PK CHAT users with sender/receiver cancellation support.",
+      "type": "object",
+      "properties": {
+        "requestId": { "type": "string", "maxLength": 128, "pattern": "^[a-zA-Z0-9_\\-]+$" },
+        "senderId": { "type": "string", "maxLength": 128, "pattern": "^[a-zA-Z0-9_\\-]+$" },
+        "senderName": { "type": "string", "maxLength": 100 },
+        "senderCountry": { "type": "string", "maxLength": 80 },
+        "senderPreferredLanguage": { "type": "string", "maxLength": 16 },
+        "senderPreferredLanguageName": { "type": "string", "maxLength": 64 },
+        "receiverId": { "type": "string", "maxLength": 128, "pattern": "^[a-zA-Z0-9_\\-]+$" },
+        "receiverName": { "type": "string", "maxLength": 100 },
+        "status": { "type": "string", "enum": ["pending", "accepted", "cancelled", "declined"] },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "updatedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["requestId", "senderId", "senderName", "senderCountry", "senderPreferredLanguage", "senderPreferredLanguageName", "receiverId", "receiverName", "status", "createdAt", "updatedAt"]
+    },
+    "GlobalSecurityState": {
+      "title": "GlobalSecurityState",
+      "description": "Server- and admin-controlled global emergency protection status (NORMAL, LOCKDOWN, RECOVERING). Readable by authenticated users, writable only by verified admins/backend.",
+      "type": "object",
+      "properties": {
+        "stateId": { "type": "string", "maxLength": 64, "pattern": "^[a-zA-Z0-9_\\-]+$" },
+        "status": { "type": "string", "enum": ["NORMAL", "LOCKDOWN", "RECOVERING"] },
+        "threatLevel": { "type": "string", "enum": ["low", "elevated", "critical"] },
+        "reasonCode": { "type": "string", "maxLength": 64 },
+        "incidentId": { "type": "string", "maxLength": 128 },
+        "restrictLogin": { "type": "boolean" },
+        "restrictMessages": { "type": "boolean" },
+        "restrictAccountChanges": { "type": "boolean" },
+        "restrictCalls": { "type": "boolean" },
+        "recheckIntervalSeconds": { "type": "integer" },
+        "threatResolved": { "type": "boolean" },
+        "updatedBy": { "type": "string", "maxLength": 128 },
+        "updatedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["stateId", "status", "threatLevel", "reasonCode", "restrictLogin", "restrictMessages", "restrictAccountChanges", "restrictCalls", "recheckIntervalSeconds", "threatResolved", "updatedBy", "updatedAt"]
+    },
+    "SecurityIncident": {
+      "title": "SecurityIncident",
+      "description": "Verified server-detected security incident triggering defensive restrictions and admin alerts.",
+      "type": "object",
+      "properties": {
+        "incidentId": { "type": "string", "maxLength": 128, "pattern": "^[a-zA-Z0-9_\\-]+$" },
+        "category": { "type": "string", "enum": ["rate_limit_abuse", "auth_brute_force", "privilege_escalation", "payload_tampering", "anomalous_flood"] },
+        "severity": { "type": "string", "enum": ["warning", "critical"] },
+        "status": { "type": "string", "enum": ["active", "mitigating", "resolved"] },
+        "sourceSignal": { "type": "string", "maxLength": 120 },
+        "summary": { "type": "string", "maxLength": 400 },
+        "detectedBy": { "type": "string", "maxLength": 128 },
+        "resolvedBy": { "type": "string", "maxLength": 128 },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "updatedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["incidentId", "category", "severity", "status", "sourceSignal", "summary", "detectedBy", "createdAt", "updatedAt"]
+    },
+    "SecurityAuditLog": {
+      "title": "SecurityAuditLog",
+      "description": "Immutable append-only audit log for global security transitions, admin resolutions, and lockdown enforcement.",
+      "type": "object",
+      "properties": {
+        "auditId": { "type": "string", "maxLength": 128, "pattern": "^[a-zA-Z0-9_\\-]+$" },
+        "actorId": { "type": "string", "maxLength": 128 },
+        "action": { "type": "string", "maxLength": 64 },
+        "fromStatus": { "type": "string", "enum": ["NORMAL", "LOCKDOWN", "RECOVERING"] },
+        "toStatus": { "type": "string", "enum": ["NORMAL", "LOCKDOWN", "RECOVERING"] },
+        "detail": { "type": "string", "maxLength": 400 },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["auditId", "actorId", "action", "fromStatus", "toStatus", "detail", "createdAt"]
+    },
+    "GmailApprovalRequest": {
+      "title": "GmailApprovalRequest",
+      "description": "Owner email approval record tying single-use code hash, thread ID, expiry, and allowlisted action.",
+      "type": "object",
+      "properties": {
+        "approvalId": { "type": "string", "maxLength": 128, "pattern": "^[a-zA-Z0-9_\\-]+$" },
+        "incidentId": { "type": "string", "maxLength": 128 },
+        "ownerEmail": { "type": "string", "maxLength": 254 },
+        "actionId": { "type": "string", "enum": ["VERIFY_AND_RECOVER", "ENABLE_STRICT_RATE_LIMIT", "KEEP_LOCKDOWN_ACTIVE", "HALT_AFFECTED_ENDPOINTS"] },
+        "threadId": { "type": "string", "maxLength": 128 },
+        "status": { "type": "string", "enum": ["pending_send", "pending_reply", "approved", "rejected", "expired"] },
+        "expiresAt": { "type": "string", "format": "date-time" },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["approvalId", "incidentId", "ownerEmail", "actionId", "status", "expiresAt", "createdAt"]
+    },
+    "ProfileMedia": {
+      "title": "ProfileMedia",
+      "description": "Backend privacy-protected user profile images (avatar and cover), extended biography, status, and block list synced across user devices.",
+      "type": "object",
+      "properties": {
+        "userId": { "type": "string", "maxLength": 128, "pattern": "^[a-zA-Z0-9_\\-]+$" },
+        "avatarDataUrl": { "type": "string", "maxLength": 200000 },
+        "coverDataUrl": { "type": "string", "maxLength": 300000 },
+        "avatarMimeType": { "type": "string", "maxLength": 32 },
+        "coverMimeType": { "type": "string", "maxLength": 32 },
+        "about": { "type": "string", "maxLength": 140 },
+        "bio": { "type": "string", "maxLength": 300 },
+        "statusMessage": { "type": "string", "maxLength": 100 },
+        "profileVisibility": { "type": "string", "enum": ["everyone", "contacts", "nobody"] },
+        "profilePhotoVisibility": { "type": "string", "enum": ["everyone", "contacts", "nobody"] },
+        "aboutVisibility": { "type": "string", "enum": ["everyone", "contacts", "nobody"] },
+        "blockedUserIds": { "type": "array" },
+        "syncVersion": { "type": "integer" },
+        "updatedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["userId", "avatarDataUrl", "coverDataUrl", "avatarMimeType", "coverMimeType", "about", "bio", "statusMessage", "profileVisibility", "profilePhotoVisibility", "aboutVisibility", "blockedUserIds", "syncVersion", "updatedAt"]
+    },
+    "CallSignal": {
+      "title": "CallSignal",
+      "description": "Lightweight 1-to-1 incoming call invite and status signaling record for PKChatCalling (45s TTL).",
+      "type": "object",
+      "properties": {
+        "callId": { "type": "string", "maxLength": 128, "pattern": "^[a-zA-Z0-9_\\-]+$" },
+        "callerId": { "type": "string", "maxLength": 128, "pattern": "^[a-zA-Z0-9_\\-]+$" },
+        "receiverId": { "type": "string", "maxLength": 128, "pattern": "^[a-zA-Z0-9_\\-]+$" },
+        "callerName": { "type": "string", "minLength": 1, "maxLength": 100 },
+        "receiverName": { "type": "string", "minLength": 1, "maxLength": 100 },
+        "callType": { "type": "string", "enum": ["audio", "video"] },
+        "status": { "type": "string", "enum": ["ringing", "accepted", "rejected", "ended"] },
+        "expiresAt": { "type": "string", "minLength": 10, "maxLength": 40 },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "updatedAt": { "type": "string", "format": "date-time" },
+        "endedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["callerId", "receiverId", "callType", "status", "expiresAt", "createdAt", "updatedAt"]
+    },
+    "StatusUpdate": {
+      "title": "StatusUpdate",
+      "description": "24-hour expiring WhatsApp-style status update (photo, video, or styled text) with privacy ACL, viewers list, and reactions.",
+      "type": "object",
+      "properties": {
+        "statusId": { "type": "string", "maxLength": 128, "pattern": "^[a-zA-Z0-9_\\-]+$" },
+        "userId": { "type": "string", "maxLength": 128, "pattern": "^[a-zA-Z0-9_\\-]+$" },
+        "authorName": { "type": "string", "minLength": 1, "maxLength": 100 },
+        "authorAvatar": { "type": "string", "maxLength": 200000 },
+        "mediaType": { "type": "string", "enum": ["text", "image", "video"] },
+        "textContent": { "type": "string", "maxLength": 700 },
+        "backgroundColor": { "type": "string", "maxLength": 32 },
+        "fontStyle": { "type": "string", "enum": ["sans", "serif", "mono"] },
+        "caption": { "type": "string", "maxLength": 500 },
+        "mediaUrl": { "type": "string", "maxLength": 350000 },
+        "mediaMimeType": { "type": "string", "maxLength": 64 },
+        "storagePath": { "type": "string", "maxLength": 256 },
+        "privacyMode": { "type": "string", "enum": ["contacts", "contacts_except", "only_share_with"] },
+        "authorizedViewerIds": { "type": "array" },
+        "excludedViewerIds": { "type": "array" },
+        "allowedViewerIds": { "type": "array" },
+        "viewedByUids": { "type": "array" },
+        "viewers": { "type": "array" },
+        "reactions": { "type": "array" },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "expiresAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["statusId", "userId", "authorName", "mediaType", "privacyMode", "authorizedViewerIds", "excludedViewerIds", "allowedViewerIds", "viewedByUids", "viewers", "reactions", "createdAt", "expiresAt"]
+    },
+    "LocationConsent": {
+      "title": "LocationConsent",
+      "description": "User-consented GPS or manual location preferences with explicit revocation.",
+      "type": "object",
+      "properties": {
+        "userId": { "type": "string", "maxLength": 128, "pattern": "^[a-zA-Z0-9_\\-]+$" },
+        "gpsConsentGranted": { "type": "boolean" },
+        "autoTravelUpdateEnabled": { "type": "boolean" },
+        "sharingActive": { "type": "boolean" },
+        "locationSource": { "type": "string", "enum": ["gps", "manual", "none"] },
+        "country": { "type": "string", "maxLength": 80 },
+        "countryCode": { "type": "string", "maxLength": 8 },
+        "province": { "type": "string", "maxLength": 120 },
+        "district": { "type": "string", "maxLength": 120 },
+        "city": { "type": "string", "maxLength": 120 },
+        "latitude": { "type": "number" },
+        "longitude": { "type": "number" },
+        "accuracyMeters": { "type": "number" },
+        "updatedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["userId", "gpsConsentGranted", "autoTravelUpdateEnabled", "sharingActive", "locationSource", "updatedAt"]
+    },
+    "EmergencyReport": {
+      "title": "EmergencyReport",
+      "description": "User-submitted emergency report shared only with explicitly consented recipients.",
+      "type": "object",
+      "properties": {
+        "reportId": { "type": "string", "maxLength": 128, "pattern": "^[a-zA-Z0-9_\\-]+$" },
+        "userId": { "type": "string", "maxLength": 128, "pattern": "^[a-zA-Z0-9_\\-]+$" },
+        "userName": { "type": "string", "maxLength": 100 },
+        "category": { "type": "string", "enum": ["flood", "earthquake", "tsunami", "cyclone_storm", "landslide", "fire", "road_accident", "medical", "missing_person", "other"] },
+        "description": { "type": "string", "maxLength": 2000 },
+        "mediaType": { "type": "string", "enum": ["none", "image", "video"] },
+        "mediaUrl": { "type": "string", "maxLength": 350000 },
+        "storagePath": { "type": "string", "maxLength": 256 },
+        "voiceTranscript": { "type": "string", "maxLength": 2000 },
+        "consentedLocation": { "type": "object", "description": "Consented approximate or GPS location snapshot" },
+        "aiSuggestedCategory": { "type": "string", "maxLength": 32 },
+        "aiVerified": { "type": "boolean" },
+        "verifiedOfficial": { "type": "boolean" },
+        "emergencyServicesNotified": { "type": "boolean" },
+        "status": { "type": "string", "enum": ["active", "resolved", "cancelled"] },
+        "sharedWithContacts": { "type": "boolean" },
+        "authorizedRecipientIds": { "type": "array" },
+        "notifiedRecipientsCount": { "type": "integer" },
+        "failedRecipientsCount": { "type": "integer" },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "updatedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["reportId", "userId", "userName", "category", "description", "aiVerified", "verifiedOfficial", "emergencyServicesNotified", "status", "sharedWithContacts", "authorizedRecipientIds", "createdAt", "updatedAt"]
+    },
+    "LanguageCatalogItem": {
+      "title": "LanguageCatalogItem",
+      "description": "Dynamic ISO 639 world language registry entry.",
+      "type": "object",
+      "properties": {
+        "code": { "type": "string", "maxLength": 16 },
+        "name": { "type": "string", "maxLength": 80 },
+        "nativeName": { "type": "string", "maxLength": 80 },
+        "iso639_1": { "type": "string", "maxLength": 8 },
+        "iso639_3": { "type": "string", "maxLength": 8 },
+        "region": { "type": "string", "maxLength": 80 },
+        "script": { "type": "string", "maxLength": 40 },
+        "rtl": { "type": "boolean" },
+        "category": { "type": "string", "enum": ["major", "regional", "minority", "indigenous"] },
+        "supported": { "type": "boolean" },
+        "speechLocale": { "type": "string", "maxLength": 16 },
+        "updatedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["code", "name", "nativeName", "supported", "speechLocale"]
+    },
+    "QrToken": {
+      "title": "QrToken",
+      "description": "Cryptographic PK Chat profile QR capability token bound to a non-PII public summary with owner revocation control.",
+      "type": "object",
+      "properties": {
+        "tokenId": { "type": "string", "maxLength": 128, "pattern": "^[a-zA-Z0-9_\\-]+$" },
+        "userId": { "type": "string", "maxLength": 128, "pattern": "^[a-zA-Z0-9_\\-]+$" },
+        "fullName": { "type": "string", "minLength": 1, "maxLength": 100 },
+        "country": { "type": "string", "maxLength": 80 },
+        "countryCode": { "type": "string", "maxLength": 8 },
+        "preferredLanguage": { "type": "string", "minLength": 2, "maxLength": 16 },
+        "preferredLanguageName": { "type": "string", "maxLength": 64 },
+        "about": { "type": "string", "maxLength": 140 },
+        "status": { "type": "string", "enum": ["active", "revoked"] },
+        "issuedAt": { "type": "string", "format": "date-time" },
+        "expiresAt": { "type": "string", "format": "date-time" },
+        "updatedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["tokenId", "userId", "fullName", "country", "countryCode", "preferredLanguage", "preferredLanguageName", "about", "status", "issuedAt", "expiresAt", "updatedAt"]
+    },
+    "BusinessProfile": {
+      "title": "BusinessProfile",
+      "description": "Verified Business Ad Card profile without private phone or email PII.",
+      "type": "object",
+      "properties": {
+        "businessId": { "type": "string", "maxLength": 128, "pattern": "^[a-zA-Z0-9_\\-]+$" },
+        "ownerUid": { "type": "string", "maxLength": 128, "pattern": "^[a-zA-Z0-9_\\-]+$" },
+        "businessName": { "type": "string", "minLength": 1, "maxLength": 100 },
+        "category": { "type": "string", "maxLength": 80 },
+        "tagline": { "type": "string", "maxLength": 160 },
+        "city": { "type": "string", "maxLength": 80 },
+        "country": { "type": "string", "maxLength": 80 },
+        "countryCode": { "type": "string", "maxLength": 8 },
+        "primaryLanguage": { "type": "string", "maxLength": 48 },
+        "enableDirectCall": { "type": "boolean" },
+        "enableLiveClass": { "type": "boolean" },
+        "selfieVerified": { "type": "boolean" },
+        "selfieVerificationHash": { "type": "string", "maxLength": 64 },
+        "updatedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["businessId", "ownerUid", "businessName", "category", "country", "countryCode", "primaryLanguage", "enableDirectCall", "enableLiveClass", "selfieVerified", "updatedAt"]
+    },
+    "SponsoredAd": {
+      "title": "SponsoredAd",
+      "description": "Sponsored Public Status & Business Ad strictly separated from Contacts Status and exposing zero personal seller phone/email PII.",
+      "type": "object",
+      "properties": {
+        "adId": { "type": "string", "maxLength": 128, "pattern": "^[a-zA-Z0-9_\\-]+$" },
+        "businessId": { "type": "string", "maxLength": 128, "pattern": "^[a-zA-Z0-9_\\-]+$" },
+        "sellerUid": { "type": "string", "maxLength": 128, "pattern": "^[a-zA-Z0-9_\\-]+$" },
+        "businessName": { "type": "string", "minLength": 1, "maxLength": 100 },
+        "category": { "type": "string", "maxLength": 80 },
+        "title": { "type": "string", "minLength": 3, "maxLength": 120 },
+        "description": { "type": "string", "minLength": 6, "maxLength": 600 },
+        "mediaType": { "type": "string", "enum": ["image", "video"] },
+        "mediaUrl": { "type": "string", "maxLength": 450000 },
+        "mediaMimeType": { "type": "string", "maxLength": 64 },
+        "targetCountry": { "type": "string", "maxLength": 80 },
+        "targetLanguage": { "type": "string", "maxLength": 48 },
+        "adScale": { "type": "string", "enum": ["small", "large"] },
+        "pricePaidUsd": { "type": "number" },
+        "playBillingSku": { "type": "string", "maxLength": 64 },
+        "selfieVerified": { "type": "boolean" },
+        "enableDirectCall": { "type": "boolean" },
+        "enableLiveClass": { "type": "boolean" },
+        "status": { "type": "string", "enum": ["active", "under_review", "suspended"] },
+        "reportCount": { "type": "integer" },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "updatedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["adId", "businessId", "sellerUid", "businessName", "category", "title", "description", "mediaType", "mediaUrl", "targetCountry", "targetLanguage", "adScale", "pricePaidUsd", "playBillingSku", "selfieVerified", "status", "reportCount", "createdAt", "updatedAt"]
+    },
+    "AdFulfillmentRequest": {
+      "title": "AdFulfillmentRequest",
+      "description": "1-to-1 private buyer-seller fulfillment request & free Product Received confirmation isolated from all other users.",
+      "type": "object",
+      "properties": {
+        "requestId": { "type": "string", "maxLength": 128, "pattern": "^[a-zA-Z0-9_\\-]+$" },
+        "adId": { "type": "string", "maxLength": 128, "pattern": "^[a-zA-Z0-9_\\-]+$" },
+        "sellerUid": { "type": "string", "maxLength": 128, "pattern": "^[a-zA-Z0-9_\\-]+$" },
+        "buyerUid": { "type": "string", "maxLength": 128, "pattern": "^[a-zA-Z0-9_\\-]+$" },
+        "buyerName": { "type": "string", "maxLength": 100 },
+        "fulfillmentType": { "type": "string", "enum": ["deliver_to_location", "direct_pickup", "scheduled_delivery"] },
+        "deliveryNote": { "type": "string", "maxLength": 280 },
+        "scheduledDateTime": { "type": "string", "maxLength": 64 },
+        "feeUsd": { "type": "number" },
+        "status": { "type": "string", "enum": ["requested", "confirmed", "received"] },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["requestId", "adId", "sellerUid", "buyerUid", "buyerName", "fulfillmentType", "feeUsd", "status", "createdAt"]
+    },
+    "AdReport": {
+      "title": "AdReport",
+      "description": "Categorized UGC ad report protecting businesses against coordinated false reports.",
+      "type": "object",
+      "properties": {
+        "reportId": { "type": "string", "maxLength": 128, "pattern": "^[a-zA-Z0-9_\\-]+$" },
+        "adId": { "type": "string", "maxLength": 128, "pattern": "^[a-zA-Z0-9_\\-]+$" },
+        "reporterUid": { "type": "string", "maxLength": 128, "pattern": "^[a-zA-Z0-9_\\-]+$" },
+        "category": { "type": "string", "enum": ["spam_misleading", "prohibited_scam", "explicit_adult", "harassment_hate", "counterfeit_ip", "fake_business"] },
+        "reason": { "type": "string", "maxLength": 300 },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["reportId", "adId", "reporterUid", "category", "createdAt"]
+    },
+    "ViolationWarning": {
+      "title": "ViolationWarning",
+      "description": "Verified violation warning notice issued strictly by admin/moderation with full recorded evidence details.",
+      "type": "object",
+      "properties": {
+        "warningId": { "type": "string", "maxLength": 128, "pattern": "^[a-zA-Z0-9_\\-]+$" },
+        "adId": { "type": "string", "maxLength": 128, "pattern": "^[a-zA-Z0-9_\\-]+$" },
+        "sellerUid": { "type": "string", "maxLength": 128, "pattern": "^[a-zA-Z0-9_\\-]+$" },
+        "violationCategory": { "type": "string", "enum": ["spam_misleading", "prohibited_scam", "explicit_adult", "harassment_hate", "counterfeit_ip", "fake_business"] },
+        "evidenceSummary": { "type": "string", "maxLength": 400 },
+        "reporterCount": { "type": "integer" },
+        "policyClause": { "type": "string", "maxLength": 160 },
+        "actionTaken": { "type": "string", "enum": ["suspended", "formal_warning"] },
+        "issuedAt": { "type": "string", "format": "date-time" },
+        "read": { "type": "boolean" }
+      },
+      "required": ["warningId", "adId", "sellerUid", "violationCategory", "evidenceSummary", "reporterCount", "policyClause", "actionTaken", "issuedAt", "read"]
+    },
+    "RemoteAdConfig": {
+      "title": "RemoteAdConfig",
+      "description": "Admin-managed remote pricing config for Google Play Billing SKUs and trial limits.",
+      "type": "object",
+      "properties": {
+        "billingLibraryVersion": { "type": "string", "maxLength": 24 },
+        "smallAdPriceUsd": { "type": "number" },
+        "largeAdPriceUsd": { "type": "number" },
+        "annualProPriceUsd": { "type": "number" },
+        "freeTrialDays": { "type": "integer" },
+        "updatedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["billingLibraryVersion", "smallAdPriceUsd", "largeAdPriceUsd", "annualProPriceUsd", "freeTrialDays", "updatedAt"]
+    }
+  },
+  "firestore": {
+    "/users/{userId}": {
+      "schema": { "$ref": "#/entities/UserAccount" },
+      "description": "Private user account credentials and PII."
+    },
+    "/user_profiles/{userId}": {
+      "schema": { "$ref": "#/entities/UserProfile" },
+      "description": "Public-safe user profile for global discovery and translation routing."
+    },
+    "/user_devices/{deviceId}": {
+      "schema": { "$ref": "#/entities/UserDevice" },
+      "description": "Trusted devices registered by users to skip repeated OTP prompts."
+    },
+    "/language_preferences/{userId}": {
+      "schema": { "$ref": "#/entities/LanguagePreference" },
+      "description": "User's independent preferred language and translation preferences."
+    },
+    "/contacts/{contactId}": {
+      "schema": { "$ref": "#/entities/Contact" },
+      "description": "User's personal contact list with block/report flags."
+    },
+    "/chats/{chatId}": {
+      "schema": { "$ref": "#/entities/DirectChat" },
+      "description": "One-to-one chat metadata."
+    },
+    "/group_chats/{groupId}": {
+      "schema": { "$ref": "#/entities/GroupChat" },
+      "description": "Group chat metadata and member list."
+    },
+    "/messages/{messageId}": {
+      "schema": { "$ref": "#/entities/ChatMessage" },
+      "description": "Messages across direct and group chats."
+    },
+    "/translated_messages/{translationId}": {
+      "schema": { "$ref": "#/entities/TranslatedMessage" },
+      "description": "Per-recipient translated messages."
+    },
+    "/call_records/{callId}": {
+      "schema": { "$ref": "#/entities/CallRecord" },
+      "description": "WebRTC call records and SDP signaling."
+    },
+    "/user_settings/{userId}": {
+      "schema": { "$ref": "#/entities/UserSettings" },
+      "description": "Appearance, wallpaper, privacy, and app lock settings."
+    },
+    "/wallpapers/{wallpaperId}": {
+      "schema": { "$ref": "#/entities/Wallpaper" },
+      "description": "Chat wallpaper presets and custom user uploads."
+    },
+    "/subscriptions/{userId}": {
+      "schema": { "$ref": "#/entities/Subscription" },
+      "description": "User subscription and trial state."
+    },
+    "/payment_records/{paymentId}": {
+      "schema": { "$ref": "#/entities/PaymentRecord" },
+      "description": "Test-mode payment history records."
+    },
+    "/emergency_contacts/{contactId}": {
+      "schema": { "$ref": "#/entities/EmergencyContact" },
+      "description": "Trusted SOS emergency contacts."
+    },
+    "/sos_alerts/{alertId}": {
+      "schema": { "$ref": "#/entities/SosAlert" },
+      "description": "User-generated SOS emergency alerts."
+    },
+    "/disaster_alerts/{alertId}": {
+      "schema": { "$ref": "#/entities/DisasterAlert" },
+      "description": "Verified official disaster alerts."
+    },
+    "/notifications/{notificationId}": {
+      "schema": { "$ref": "#/entities/NotificationItem" },
+      "description": "In-app user notifications."
+    },
+    "/security_logs/{logId}": {
+      "schema": { "$ref": "#/entities/SecurityLog" },
+      "description": "Audit trail for authentication, device trust, and security events."
+    },
+    "/admin_users/{adminUid}": {
+      "schema": { "$ref": "#/entities/AdminUser" },
+      "description": "Authorized admin accounts."
+    },
+    "/scheduled_posts/{postId}": {
+      "schema": { "$ref": "#/entities/ScheduledPost" },
+      "description": "Scheduled chat wishes and future status updates."
+    },
+    "/phone_directory/{phoneHash}": {
+      "schema": { "$ref": "#/entities/PhoneDirectoryEntry" },
+      "description": "Exact-match SHA-256 hashed phone lookup index (non-listable)."
+    },
+    "/contact_requests/{requestId}": {
+      "schema": { "$ref": "#/entities/ContactRequest" },
+      "description": "Consent-driven contact connection requests."
+    },
+    "/system_security/{docId}": {
+      "schema": { "$ref": "#/entities/GlobalSecurityState" },
+      "description": "Global server/admin-controlled security posture (NORMAL, LOCKDOWN, RECOVERING)."
+    },
+    "/security_incidents/{incidentId}": {
+      "schema": { "$ref": "#/entities/SecurityIncident" },
+      "description": "Verified security incidents accessible only to authorized administrators and backend."
+    },
+    "/security_audit_logs/{auditId}": {
+      "schema": { "$ref": "#/entities/SecurityAuditLog" },
+      "description": "Append-only immutable audit logs for security posture transitions."
+    },
+    "/gmail_approvals/{approvalId}": {
+      "schema": { "$ref": "#/entities/GmailApprovalRequest" },
+      "description": "Owner-only Gmail approval tracking for security code/config changes."
+    },
+    "/profile_media/{userId}": {
+      "schema": { "$ref": "#/entities/ProfileMedia" },
+      "description": "Privacy-enforced personal profile photos, cover images, biography, status, and block settings synchronized across user devices."
+    },
+    "/calls/{callId}": {
+      "schema": { "$ref": "#/entities/CallSignal" },
+      "description": "Mobile & Web 1-to-1 call invite state (ringing, accepted, rejected, ended) with 45-second expiration."
+    },
+    "/statuses/{statusId}": {
+      "schema": { "$ref": "#/entities/StatusUpdate" },
+      "description": "24-hour expiring Status updates (photos, videos, styled text) with privacy lists, viewers, and emoji reactions."
+    },
+    "/location_consents/{userId}": {
+      "schema": { "$ref": "#/entities/LocationConsent" },
+      "description": "Private owner-only consented location and travel update state."
+    },
+    "/emergency_reports/{reportId}": {
+      "schema": { "$ref": "#/entities/EmergencyReport" },
+      "description": "User emergency reports accessible only to creator and explicitly consented recipients."
+    },
+    "/language_catalog/{langCode}": {
+      "schema": { "$ref": "#/entities/LanguageCatalogItem" },
+      "description": "Dynamic world language registry."
+    },
+    "/qr_tokens/{tokenId}": {
+      "schema": { "$ref": "#/entities/QrToken" },
+      "description": "Capability-based PK Chat QR profile tokens synchronized with the real-time verification server."
+    },
+    "/business_profiles/{userId}": {
+      "schema": { "$ref": "#/entities/BusinessProfile" },
+      "description": "Business Ad Card profiles free to create; zero private phone or email PII exposed publicly."
+    },
+    "/sponsored_ads/{adId}": {
+      "schema": { "$ref": "#/entities/SponsoredAd" },
+      "description": "Pay-at-Publish ($5/$10) country & language targeted Sponsored Public Status feed."
+    },
+    "/ad_fulfillment_requests/{requestId}": {
+      "schema": { "$ref": "#/entities/AdFulfillmentRequest" },
+      "description": "Isolated 1-to-1 buyer-seller fulfillment requests with $0 free Product Received confirmation."
+    },
+    "/ad_reports/{reportId}": {
+      "schema": { "$ref": "#/entities/AdReport" },
+      "description": "UGC compliance reports triggering non-destructive Under Review state pending verification."
+    },
+    "/violation_warnings/{warningId}": {
+      "schema": { "$ref": "#/entities/ViolationWarning" },
+      "description": "Official verified violation warning notices readable by offending seller or admin."
+    },
+    "/remote_ad_config/{configId}": {
+      "schema": { "$ref": "#/entities/RemoteAdConfig" },
+      "description": "Remote-configurable Google Play Billing tier prices ($5/$10/$10yr) writable strictly by admins."
+    }
+  }
+}
