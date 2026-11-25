@@ -121,6 +121,11 @@ import {
 } from '../src/lib/chatMediaUtils';
 import { getSecurityCopyForLanguage } from '../src/lib/securityTranslations';
 import {
+  TAMIL_AREAS,
+  filterRelevantMessengerAlerts,
+  getPKFamilyCareMessage,
+} from '../src/lib/messengerDisasterAlerts';
+import {
   MAX_LARGE_VIDEO_BYTES,
   MAX_VIDEO_DURATION_SECONDS,
   SecurityShieldSystem,
@@ -3454,6 +3459,206 @@ async function main() {
     );
     assert.ok(settingsSrc.includes('pkSignatureAudio.startIncomingRingtone()'));
     assert.ok(settingsSrc.includes('pkSignatureAudio.playNotificationTone()'));
+  });
+
+  await runCase('WhatsAppStatusSection & StatusUpdatesView: 24h Grouping, Auto-View Recording, Private Reply & Slide-Up Viewed-By Bottom Sheet', () => {
+    const waStatusPath = path.join(process.cwd(), 'src/components/WhatsAppStatusSection.tsx');
+    const statusViewPath = path.join(process.cwd(), 'src/components/StatusUpdatesView.tsx');
+    assert.equal(fs.existsSync(waStatusPath), true);
+
+    const waSrc = fs.readFileSync(waStatusPath, 'utf8');
+    const statusViewSrc = fs.readFileSync(statusViewPath, 'utf8');
+
+    // Verify named + default export and real-time context wiring
+    assert.ok(waSrc.includes('export function WhatsAppStatusSection'));
+    assert.ok(waSrc.includes('export default WhatsAppStatusSection'));
+    assert.ok(waSrc.includes('markStatusViewed'));
+    assert.ok(waSrc.includes('replyToStatus'));
+    assert.ok(waSrc.includes('reactToStatus'));
+
+    // Verify Light-Blue Frosted Glass & small circular avatars + slide-up Viewed by sheet
+    for (const src of [waSrc, statusViewSrc]) {
+      assert.ok(src.includes('#e3f3ff'));
+      assert.ok(src.includes('#7dd3fc'));
+      assert.ok(src.includes('#0284c7'));
+      assert.ok(src.includes('fixed inset-x-0 bottom-0'));
+      assert.ok(src.includes('Viewed by'));
+      assert.ok(src.includes('<UserAvatar'));
+      assert.equal(src.includes('/default-avatar.png'), false);
+      assert.equal(src.includes('& Wife'), false);
+    }
+
+    assert.ok(waSrc.includes('w-12 h-12'));
+    assert.ok(waSrc.includes('No views yet'));
+    assert.ok(statusViewSrc.includes('No views yet'));
+
+    // Functional check: 24-hour window, viewer count & unseen vs viewed grouping
+    const nowMs = Date.now();
+    const activeMyStatus = {
+      statusId: 'st_mine_1',
+      userId: 'uid_owner',
+      authorName: 'Prashanth keransiya',
+      mediaType: 'image' as const,
+      mediaUrl: 'https://example.com/photo.jpg',
+      privacyMode: 'contacts' as const,
+      authorizedViewerIds: ['uid_owner', 'uid_peer_1'],
+      excludedViewerIds: [],
+      allowedViewerIds: [],
+      viewedByUids: ['uid_peer_1'],
+      viewers: [
+        {
+          viewerId: 'uid_peer_1',
+          viewerName: 'Kavitha',
+          viewerAvatar: '',
+          viewedAt: new Date(nowMs - 5 * 60_000).toISOString(),
+        },
+      ],
+      reactions: [{ userId: 'uid_peer_1', userName: 'Kavitha', emoji: '❤️', reactedAt: new Date(nowMs).toISOString() }],
+      createdAt: nowMs - 60 * 60_000,
+      expiresAt: nowMs + STATUS_TTL_MS - 60 * 60_000,
+    };
+    const expiredStatus = {
+      ...activeMyStatus,
+      statusId: 'st_expired',
+      expiresAt: nowMs - 1000,
+    };
+    const peerUnseen = {
+      ...activeMyStatus,
+      statusId: 'st_peer_unseen',
+      userId: 'uid_peer_1',
+      authorName: 'Kavitha',
+      viewedByUids: [],
+      viewers: [],
+      reactions: [],
+    };
+
+    const grouped = groupStatusesByAuthor([activeMyStatus, expiredStatus, peerUnseen], 'uid_owner', nowMs);
+    assert.equal(grouped.myStatuses.length, 1);
+    assert.equal(grouped.myStatuses[0].viewers.length, 1);
+    assert.equal(grouped.myStatuses[0].viewers[0].viewerName, 'Kavitha');
+    assert.equal(grouped.recentGroups.length, 1);
+    assert.equal(grouped.recentGroups[0].unseenCount, 1);
+    assert.equal(grouped.viewedGroups.length, 0);
+  });
+
+  await runCase('PkLiveClassRoom & /classes Firestore Security Rules: Waiting Room, Host Admit, Atomic Mute All, Screen Share & In-Class Chat', () => {
+    const classRoomPath = path.join(process.cwd(), 'src/components/PkLiveClassRoom.tsx');
+    const whiteboardPath = path.join(process.cwd(), 'src/components/ClassWhiteboardView.tsx');
+    const rulesPath = path.join(process.cwd(), 'firestore.rules');
+    const blueprintPath = path.join(process.cwd(), 'firebase-blueprint.json');
+
+    assert.equal(fs.existsSync(classRoomPath), true);
+    const roomSrc = fs.readFileSync(classRoomPath, 'utf8');
+    const boardSrc = fs.readFileSync(whiteboardPath, 'utf8');
+    const rulesSrc = fs.readFileSync(rulesPath, 'utf8');
+    const blueprintSrc = fs.readFileSync(blueprintPath, 'utf8');
+
+    // Exports & PK Chat integration
+    assert.ok(roomSrc.includes('export function PkLiveClassRoom'));
+    assert.ok(roomSrc.includes('export const ZoomClassRoom = PkLiveClassRoom'));
+    assert.ok(roomSrc.includes('export default PkLiveClassRoom'));
+    assert.ok(roomSrc.includes('handleFirestoreError'));
+    assert.ok(roomSrc.includes('writeBatch'));
+    assert.ok(roomSrc.includes('getDisplayMedia'));
+    assert.ok(roomSrc.includes('stopAllMediaTracks'));
+    assert.ok(roomSrc.includes('<UserAvatar'));
+    assert.equal(roomSrc.includes('/default-avatar.png'), false);
+    assert.equal(/Zoom Class|Zoom DND|Zoom Settings|Zoom Side Panel/.test(roomSrc), false);
+    assert.equal(roomSrc.includes('& Wife'), false);
+
+    // Light-blue frosted glass accents & ClassWhiteboardView launcher
+    assert.ok(roomSrc.includes('#e3f3ff'));
+    assert.ok(roomSrc.includes('#7dd3fc'));
+    assert.ok(roomSrc.includes('#0284c7'));
+    assert.ok(boardSrc.includes('PkLiveClassRoom'));
+    assert.ok(boardSrc.includes('Live Video Room'));
+
+    // Firestore Rules & Blueprint verification for /classes/{roomId}
+    assert.ok(rulesSrc.includes('function isClassHost(roomId)'));
+    assert.ok(rulesSrc.includes('function isClassParticipant(roomId)'));
+    assert.ok(rulesSrc.includes('function isValidClassSession(data)'));
+    assert.ok(rulesSrc.includes('function isValidClassParticipant(data)'));
+    assert.ok(rulesSrc.includes('function isValidClassWaitingEntry(data)'));
+    assert.ok(rulesSrc.includes('function isValidClassChatMessage(data)'));
+    assert.ok(rulesSrc.includes('match /classes/{roomId}'));
+    assert.ok(rulesSrc.includes('match /participants/{participantUid}'));
+    assert.ok(rulesSrc.includes('match /waitingRoom/{studentUid}'));
+    assert.ok(rulesSrc.includes('match /messages/{messageId}'));
+
+    assert.ok(blueprintSrc.includes('"ClassSession"'));
+    assert.ok(blueprintSrc.includes('"ClassParticipant"'));
+    assert.ok(blueprintSrc.includes('"ClassWaitingEntry"'));
+    assert.ok(blueprintSrc.includes('"ClassChatMessage"'));
+    assert.ok(blueprintSrc.includes('"/classes/{roomId}"'));
+  });
+
+  await runCase('MessengerDisasterAlerts: Tamil/English PK Family Care Alert Messaging, Country/Major Filtering & UI Integration', () => {
+    assert.ok(TAMIL_AREAS.includes('jaffna'));
+    assert.ok(TAMIL_AREAS.includes('tamil nadu'));
+    assert.ok(TAMIL_AREAS.includes('nuwara eliya'));
+
+    const jaffnaCare = getPKFamilyCareMessage({ city: 'Jaffna', region: 'Northern Province', country: 'Sri Lanka' });
+    assert.equal(jaffnaCare.language, 'ta');
+    assert.ok(jaffnaCare.headline.includes('PK Chat தரப்பு'));
+    assert.ok(jaffnaCare.subtext.includes('SOS'));
+
+    const tamilNaduCare = getPKFamilyCareMessage({ city: 'Madurai', region: 'Tamil Nadu', country: 'India' });
+    assert.equal(tamilNaduCare.language, 'ta');
+
+    const globalCare = getPKFamilyCareMessage({ city: 'London', region: 'Greater London', country: 'United Kingdom' });
+    assert.equal(globalCare.language, 'en');
+    assert.ok(globalCare.headline.includes('From PK Chat and on behalf of your family'));
+    assert.ok(globalCare.subtext.includes('SOS'));
+
+    const sampleAlerts = [
+      {
+        id: 'lk_1',
+        title: 'Heavy Flood Advisory',
+        description: 'Move to higher ground',
+        country: 'Sri Lanka',
+        region: 'Jaffna District',
+        source: 'DMC Official',
+        issuedAt: 1700000001000,
+        severity: 'advisory',
+      },
+      {
+        id: 'jp_major',
+        title: 'Major Tsunami Warning',
+        description: 'Evacuate coastal areas',
+        country: 'Japan',
+        region: 'Honshu Coast',
+        source: 'JMA Official',
+        issuedAt: 1700000002000,
+        isMajor: true,
+        severity: 'extreme',
+      },
+      {
+        id: 'fr_minor',
+        title: 'Local Wind Advisory',
+        description: 'Light gust advisory',
+        country: 'France',
+        region: 'Lyon',
+        source: 'Meteo',
+        issuedAt: 1700000003000,
+        isMajor: false,
+        severity: 'advisory',
+      },
+    ];
+
+    const filtered = filterRelevantMessengerAlerts(sampleAlerts, 'Sri Lanka');
+    assert.equal(filtered.length, 2);
+    assert.deepEqual(filtered.map((a) => a.id), ['jp_major', 'lk_1']);
+
+    const compSrc = fs.readFileSync(path.join(process.cwd(), 'src/components/MessengerDisasterAlerts.tsx'), 'utf8');
+    const chatSrc = fs.readFileSync(path.join(process.cwd(), 'src/components/ChatWorkspace.tsx'), 'utf8');
+    const safetySrc = fs.readFileSync(path.join(process.cwd(), 'src/components/SafetyAndDisasterView.tsx'), 'utf8');
+
+    assert.ok(compSrc.includes('export function MessengerDisasterAlerts'));
+    assert.ok(compSrc.includes('export default MessengerDisasterAlerts'));
+    assert.ok(compSrc.includes('verifiedOfficial'));
+    assert.equal(compSrc.includes('& Wife'), false);
+    assert.ok(chatSrc.includes('<MessengerDisasterAlerts'));
+    assert.ok(safetySrc.includes('<MessengerDisasterAlerts'));
   });
 
   const passedCount = results.filter((r) => r.passed).length;

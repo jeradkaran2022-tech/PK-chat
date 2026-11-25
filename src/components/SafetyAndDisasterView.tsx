@@ -32,6 +32,7 @@ import { getCachedGpsFix, saveCachedGpsFix } from '../lib/connectivityAndDnd';
 import { ConsentedLocation } from '../types/pkchat';
 import { WazeNavigationModal } from './WazeNavigationModal';
 import { localizeRedAlert, markOfficialIdsRead } from '../lib/officialInboxEngine';
+import { MessengerDisasterAlerts } from './MessengerDisasterAlerts';
 
 function formatCountdownMs(ms: number): string {
   const clamped = Math.max(0, Math.floor(ms / 1000));
@@ -1355,6 +1356,8 @@ export function SafetyAndDisasterView() {
           Feed status note: {disasterFeedErrors.join(' · ')}
         </div>
       )}
+
+      <MessengerDisasterAlerts maxVisible={4} />
 
       <div className="grid md:grid-cols-2 gap-4">
         {visibleDisasters.length === 0 ? (

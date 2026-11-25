@@ -786,6 +786,65 @@
         "updatedAt": { "type": "string", "format": "date-time" }
       },
       "required": ["billingLibraryVersion", "smallAdPriceUsd", "largeAdPriceUsd", "annualProPriceUsd", "freeTrialDays", "updatedAt"]
+    },
+    "ClassSession": {
+      "title": "ClassSession",
+      "description": "Real-time PK Live Class room header establishing host authority and active/ended lifecycle.",
+      "type": "object",
+      "properties": {
+        "roomId": { "type": "string", "maxLength": 128, "pattern": "^[a-zA-Z0-9_\\-]+$" },
+        "hostUid": { "type": "string", "maxLength": 128, "pattern": "^[a-zA-Z0-9_\\-]+$" },
+        "hostName": { "type": "string", "minLength": 1, "maxLength": 100 },
+        "title": { "type": "string", "minLength": 1, "maxLength": 120 },
+        "status": { "type": "string", "enum": ["active", "ended"] },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "updatedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["roomId", "hostUid", "hostName", "title", "status", "createdAt", "updatedAt"]
+    },
+    "ClassParticipant": {
+      "title": "ClassParticipant",
+      "description": "Admitted participant inside a PK Live Class room with mic/cam/handRaised state.",
+      "type": "object",
+      "properties": {
+        "uid": { "type": "string", "maxLength": 128, "pattern": "^[a-zA-Z0-9_\\-]+$" },
+        "roomId": { "type": "string", "maxLength": 128, "pattern": "^[a-zA-Z0-9_\\-]+$" },
+        "name": { "type": "string", "minLength": 1, "maxLength": 100 },
+        "photoURL": { "type": "string", "maxLength": 200000 },
+        "role": { "type": "string", "enum": ["host", "participant"] },
+        "micOn": { "type": "boolean" },
+        "camOn": { "type": "boolean" },
+        "handRaised": { "type": "boolean" },
+        "joinedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["uid", "roomId", "name", "role", "micOn", "camOn", "handRaised", "joinedAt"]
+    },
+    "ClassWaitingEntry": {
+      "title": "ClassWaitingEntry",
+      "description": "Student waiting room request awaiting host admission into a PK Live Class room.",
+      "type": "object",
+      "properties": {
+        "uid": { "type": "string", "maxLength": 128, "pattern": "^[a-zA-Z0-9_\\-]+$" },
+        "roomId": { "type": "string", "maxLength": 128, "pattern": "^[a-zA-Z0-9_\\-]+$" },
+        "name": { "type": "string", "minLength": 1, "maxLength": 100 },
+        "photoURL": { "type": "string", "maxLength": 200000 },
+        "requestedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["uid", "roomId", "name", "requestedAt"]
+    },
+    "ClassChatMessage": {
+      "title": "ClassChatMessage",
+      "description": "Real-time in-class message posted by admitted participants or the host.",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string", "maxLength": 128, "pattern": "^[a-zA-Z0-9_\\-]+$" },
+        "roomId": { "type": "string", "maxLength": 128, "pattern": "^[a-zA-Z0-9_\\-]+$" },
+        "senderId": { "type": "string", "maxLength": 128, "pattern": "^[a-zA-Z0-9_\\-]+$" },
+        "senderName": { "type": "string", "minLength": 1, "maxLength": 100 },
+        "text": { "type": "string", "minLength": 1, "maxLength": 2000 },
+        "sentAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["id", "roomId", "senderId", "senderName", "text", "sentAt"]
     }
   },
   "firestore": {
@@ -948,6 +1007,22 @@
     "/remote_ad_config/{configId}": {
       "schema": { "$ref": "#/entities/RemoteAdConfig" },
       "description": "Remote-configurable Google Play Billing tier prices ($5/$10/$10yr) writable strictly by admins."
+    },
+    "/classes/{roomId}": {
+      "schema": { "$ref": "#/entities/ClassSession" },
+      "description": "PK Live Class room metadata and host authority record."
+    },
+    "/classes/{roomId}/participants/{participantUid}": {
+      "schema": { "$ref": "#/entities/ClassParticipant" },
+      "description": "Admitted participants inside a PK Live Class room."
+    },
+    "/classes/{roomId}/waitingRoom/{studentUid}": {
+      "schema": { "$ref": "#/entities/ClassWaitingEntry" },
+      "description": "Students waiting for host admission into a PK Live Class room."
+    },
+    "/classes/{roomId}/messages/{messageId}": {
+      "schema": { "$ref": "#/entities/ClassChatMessage" },
+      "description": "Real-time in-class chat messages for a PK Live Class room."
     }
   }
 }

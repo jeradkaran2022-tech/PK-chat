@@ -34,6 +34,7 @@ import {
   formatStatusRelativeTime,
   getStatusRemainingLabel,
   groupStatusesByAuthor,
+  toEpochMs,
 } from '../lib/statusMedia';
 import { formatFileSize, triggerMediaDownload } from '../lib/chatMediaUtils';
 import {
@@ -1707,45 +1708,82 @@ export function StatusUpdatesView() {
                 <button
                   type="button"
                   onClick={() => setViewersDrawerOpen((o) => !o)}
-                  className="mx-auto px-5 py-2.5 rounded-full bg-white/15 hover:bg-white/25 text-white text-xs font-semibold flex items-center gap-2"
+                  className="mx-auto px-5 py-2.5 rounded-full bg-[#0284c7]/90 hover:bg-[#0284c7] text-white text-xs font-semibold flex items-center gap-2 shadow-lg transition-colors"
                 >
                   <Eye className="w-4 h-4" />
                   <span>Viewed by {activeStory.viewers?.length || 0}</span>
-                  <span className="text-rose-300 font-bold">
+                  <span className="text-sky-100 font-bold">
                     · ❤️ {activeStory.reactions?.length || 0} Likes
                   </span>
                 </button>
 
                 {viewersDrawerOpen && (
-                  <div className="mt-3 p-4 rounded-2xl bg-slate-900 border border-slate-700 text-white max-h-56 overflow-y-auto space-y-2.5">
-                    <div className="flex items-center justify-between text-xs font-bold border-b border-slate-800 pb-2">
-                      <span>Viewers &amp; Reactions ({activeStory.viewers?.length || 0})</span>
-                      <button type="button" onClick={() => setViewersDrawerOpen(false)}>
-                        <X className="w-4 h-4" />
-                      </button>
+                  <>
+                    <button
+                      type="button"
+                      aria-label="Close viewers sheet backdrop"
+                      onClick={() => setViewersDrawerOpen(false)}
+                      className="fixed inset-0 z-[55] bg-black/50 backdrop-blur-[2px]"
+                    />
+                    <div className="fixed inset-x-0 bottom-0 z-[60] bg-[#e3f3ff]/95 dark:bg-slate-900 backdrop-blur-2xl rounded-t-3xl border-t border-[#7dd3fc] dark:border-slate-700 shadow-2xl max-h-[60vh] flex flex-col max-w-xl mx-auto overflow-hidden">
+                      <div className="flex items-center justify-between px-5 py-3.5 bg-gradient-to-r from-[#0284c7] to-[#0369a1] text-white">
+                        <div className="flex items-center gap-2 text-sm font-bold">
+                          <Eye className="w-4 h-4" />
+                          <span>Viewed by {activeStory.viewers?.length || 0}</span>
+                        </div>
+                        <button
+                          type="button"
+                          onClick={() => setViewersDrawerOpen(false)}
+                          aria-label="Close Viewed by sheet"
+                          className="p-1.5 rounded-full bg-white/15 hover:bg-white/25 text-white"
+                        >
+                          <X className="w-4 h-4" />
+                        </button>
+                      </div>
+
+                      <div className="overflow-y-auto p-4 space-y-2.5">
+                        {(activeStory.viewers?.length || 0) === 0 ? (
+                          <p className="text-center text-xs text-slate-600 dark:text-slate-400 py-6">
+                            No views yet
+                          </p>
+                        ) : (
+                          [...(activeStory.viewers || [])]
+                            .sort((a, b) => toEpochMs(b.viewedAt) - toEpochMs(a.viewedAt))
+                            .map((v) => {
+                              const reaction = activeStory.reactions?.find(
+                                (r) => r.userId === v.viewerId
+                              );
+                              const viewedMs = toEpochMs(v.viewedAt);
+                              const clockLabel = viewedMs
+                                ? new Date(viewedMs).toLocaleTimeString([], {
+                                    hour: '2-digit',
+                                    minute: '2-digit',
+                                  })
+                                : 'Just now';
+                              return (
+                                <div
+                                  key={v.viewerId}
+                                  className="flex items-center justify-between gap-3 p-2.5 rounded-2xl bg-[#d2ecff]/70 dark:bg-slate-800/70 border border-[#7dd3fc]/50 dark:border-slate-700 text-xs"
+                                >
+                                  <div className="flex items-center gap-3 min-w-0">
+                                    <UserAvatar src={v.viewerAvatar} name={v.viewerName} size="sm" />
+                                    <div className="min-w-0">
+                                      <p className="font-semibold text-slate-900 dark:text-white truncate">
+                                        {v.viewerName}
+                                      </p>
+                                      <p className="text-[11px] text-slate-600 dark:text-slate-400">
+                                        {clockLabel} · {formatStatusRelativeTime(v.viewedAt)}
+                                      </p>
+                                    </div>
+                                  </div>
+                                  {reaction && <span className="text-base shrink-0">{reaction.emoji}</span>}
+                                </div>
+                              );
+                            })
+                        )}
+                      </div>
                     </div>
-                    {(activeStory.viewers?.length || 0) === 0 ? (
-                      <p className="text-xs text-slate-400">No contacts have viewed this Status yet.</p>
-                    ) : (
-                      activeStory.viewers.map((v) => {
-                        const reaction = activeStory.reactions?.find((r) => r.userId === v.viewerId);
-                        return (
-                          <div key={v.viewerId} className="flex items-center justify-between text-xs">
-                            <div className="flex items-center gap-2.5">
-                              <UserAvatar src={v.viewerAvatar} name={v.viewerName} size="xs" />
-                              <div>
-                                <p className="font-semibold">{v.viewerName}</p>
-                                <p className="text-[10px] text-slate-400">
-                                  {formatStatusRelativeTime(v.viewedAt)}
-                                </p>
-                              </div>
-                            </div>
-                            {reaction && <span className="text-base">{reaction.emoji}</span>}
-                          </div>
-                        );
-                      })
-                    )}
-                  </div>
+                  </>
                 )}
               </div>
             ) : (

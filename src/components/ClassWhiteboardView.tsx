@@ -64,6 +64,7 @@ import {
 } from '../lib/connectivityAndDnd';
 import { useOnlineStatus } from '../hooks/usePWAInstall';
 import { PkLiveClassIcon } from './PkLiveClassIcon';
+import { PkLiveClassRoom } from './PkLiveClassRoom';
 import {
   analyzeVideoFrameForUnsafeContent,
   evaluateClassSafetyContent,
@@ -140,6 +141,7 @@ export function ClassWhiteboardView() {
   const [langPickerTarget, setLangPickerTarget] = useState<'student' | 'teacher' | null>(null);
   const [langSearch, setLangSearch] = useState<string>('');
   const [notice, setNotice] = useState<string | null>(null);
+  const [liveVideoRoomOpen, setLiveVideoRoomOpen] = useState<boolean>(false);
 
   // Dedicated 4-Tab PK Live Class Hub + Isolated Class Messages + Class Calls + Class Settings
   const [liveClassTab, setLiveClassTab] = useState<'board' | 'messages' | 'calls' | 'settings'>('board');
@@ -1642,6 +1644,14 @@ export function ClassWhiteboardView() {
             >
               Join
             </button>
+            <button
+              type="button"
+              onClick={() => setLiveVideoRoomOpen(true)}
+              className="px-3.5 py-1.5 rounded-xl bg-[#0284c7] hover:bg-[#0369a1] text-white text-xs font-bold inline-flex items-center gap-1.5 shadow-sm"
+            >
+              <Video className="w-3.5 h-3.5" />
+              <span>Live Video Room</span>
+            </button>
           </div>
         </div>
       </div>
@@ -2840,6 +2850,15 @@ export function ClassWhiteboardView() {
             </div>
           </div>
         </div>
+      )}
+
+      {liveVideoRoomOpen && (
+        <PkLiveClassRoom
+          roomId={roomId}
+          roomTitle={roomTitle}
+          isHost={role === 'teacher'}
+          onLeave={() => setLiveVideoRoomOpen(false)}
+        />
       )}
     </div>
   );

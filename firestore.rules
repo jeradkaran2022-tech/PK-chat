@@ -794,6 +794,62 @@ service cloud.firestore {
         && data.updatedAt is timestamp;
     }
 
+    function isClassHost(roomId) {
+      return exists(/databases/$(database)/documents/classes/$(roomId))
+        && get(/databases/$(database)/documents/classes/$(roomId)).data.hostUid == request.auth.uid;
+    }
+
+    function isClassParticipant(roomId) {
+      return exists(/databases/$(database)/documents/classes/$(roomId)/participants/$(request.auth.uid));
+    }
+
+    function isValidClassSession(data) {
+      return data.keys().hasAll(['roomId', 'hostUid', 'hostName', 'title', 'status', 'createdAt', 'updatedAt'])
+        && data.keys().hasOnly(['roomId', 'hostUid', 'hostName', 'title', 'status', 'createdAt', 'updatedAt'])
+        && isValidId(data.roomId)
+        && isValidId(data.hostUid)
+        && data.hostName is string && data.hostName.size() >= 1 && data.hostName.size() <= 100
+        && data.title is string && data.title.size() >= 1 && data.title.size() <= 120
+        && data.status in ['active', 'ended']
+        && data.createdAt is timestamp
+        && data.updatedAt is timestamp;
+    }
+
+    function isValidClassParticipant(data) {
+      return data.keys().hasAll(['uid', 'roomId', 'name', 'role', 'micOn', 'camOn', 'handRaised', 'joinedAt'])
+        && data.keys().hasOnly(['uid', 'roomId', 'name', 'photoURL', 'role', 'micOn', 'camOn', 'handRaised', 'joinedAt'])
+        && isValidId(data.uid)
+        && isValidId(data.roomId)
+        && data.name is string && data.name.size() >= 1 && data.name.size() <= 100
+        && (!('photoURL' in data) || (data.photoURL is string && data.photoURL.size() <= 200000))
+        && data.role in ['host', 'participant']
+        && data.micOn is bool
+        && data.camOn is bool
+        && data.handRaised is bool
+        && data.joinedAt is timestamp;
+    }
+
+    function isValidClassWaitingEntry(data) {
+      return data.keys().hasAll(['uid', 'roomId', 'name', 'requestedAt'])
+        && data.keys().hasOnly(['uid', 'roomId', 'name', 'photoURL', 'requestedAt'])
+        && isValidId(data.uid)
+        && isValidId(data.roomId)
+        && data.name is string && data.name.size() >= 1 && data.name.size() <= 100
+        && (!('photoURL' in data) || (data.photoURL is string && data.photoURL.size() <= 200000))
+        && data.requestedAt is timestamp;
+    }
+
+    function isValidClassChatMessage(data) {
+      return data.keys().hasAll(['id', 'roomId', 'senderId', 'senderName', 'text', 'sentAt'])
+        && data.keys().hasOnly(['id', 'roomId', 'senderId', 'senderName', 'text', 'sentAt'])
+        && isValidId(data.id)
+        && isValidId(data.roomId)
+        && isValidId(data.senderId)
+        && data.senderName is string && data.senderName.size() >= 1 && data.senderName.size() <= 100
+        && data.text is string && data.text.size() >= 1 && data.text.size() <= 2000
+        && data.sentAt is timestamp;
+    }
+
     // 1. users (Private PII)
     match /users/{userId} {
       allow get: if isSignedIn() && isValidId(userId) && (isOwner(userId) || isAdmin());
@@ -1776,6 +1832,125 @@ service cloud.firestore {
       allow get: if isSignedIn() && isValidId(configId);
       allow list: if isSignedIn();
       allow create, update, delete: if isAdmin() && isValidId(configId) && (request.method == 'delete' || isValidRemoteAdConfig(incoming()));
+    }
+
+    // 41. classes (Real-time PK Live Class rooms with host waitingRoom admission & in-class chat)
+    match /classes/{roomId} {
+      allow get: if isSignedIn() && isValidId(roomId);
+      allow list: if isSignedIn() && (resource.data.hostUid == request.auth.uid || isAdmin());
+      allow create: if isVerifiedUser() && isValidId(roomId)
+        && isValidClassSession(incoming())
+        && (!isSystemLockedDown() || isAdmin())
+        && incoming().roomId == roomId
+        && incoming().hostUid == request.auth.uid
+        && incoming().status == 'active'
+        && incoming().createdAt == request.time
+        && incoming().updatedAt == request.time;
+      allow update: if isVerifiedUser() && isValidId(roomId)
+        && isValidClassSession(incoming())
+        && (!isSystemLockedDown() || isAdmin())
+        && incoming().roomId == existing().roomId
+        && incoming().hostUid == existing().hostUid
+        && incoming().createdAt == existing().createdAt
+        && incoming().updatedAt == request.time
+        && existing().status != 'ended'
+        && (
+          isAdmin() ||
+          (existing().hostUid == request.auth.uid && incoming().diff(existing()).affectedKeys().hasOnly(['title', 'status', 'updatedAt']))
+        );
+      allow delete: if isSignedIn() && isValidId(roomId) && (existing().hostUid == request.auth.uid || isAdmin());
+
+      match /participants/{participantUid} {
+        allow get: if isSignedIn() && isValidId(roomId) && isValidId(participantUid) && (
+          participantUid == request.auth.uid ||
+          isClassHost(roomId) ||
+          isClassParticipant(roomId) ||
+          isAdmin()
+        );
+        allow list: if isSignedIn() && (
+          resource.data.uid == request.auth.uid ||
+          isClassHost(roomId) ||
+          isClassParticipant(roomId) ||
+          isAdmin()
+        );
+        allow create: if isVerifiedUser() && isValidId(roomId) && isValidId(participantUid)
+          && isValidClassParticipant(incoming())
+          && (!isSystemLockedDown() || isAdmin())
+          && incoming().uid == participantUid
+          && incoming().roomId == roomId
+          && incoming().joinedAt == request.time
+          && isClassHost(roomId)
+          && (
+            (participantUid == request.auth.uid && incoming().role == 'host') ||
+            incoming().role == 'participant'
+          );
+        allow update: if isVerifiedUser() && isValidId(roomId) && isValidId(participantUid)
+          && isValidClassParticipant(incoming())
+          && (!isSystemLockedDown() || isAdmin())
+          && incoming().uid == existing().uid
+          && incoming().roomId == existing().roomId
+          && incoming().role == existing().role
+          && incoming().joinedAt == existing().joinedAt
+          && (
+            isAdmin() ||
+            (isClassHost(roomId) && incoming().diff(existing()).affectedKeys().hasOnly(['micOn'])) ||
+            (participantUid == request.auth.uid && incoming().diff(existing()).affectedKeys().hasOnly(['micOn', 'camOn', 'handRaised']))
+          );
+        allow delete: if isSignedIn() && isValidId(roomId) && isValidId(participantUid) && (
+          participantUid == request.auth.uid ||
+          isClassHost(roomId) ||
+          isAdmin()
+        );
+      }
+
+      match /waitingRoom/{studentUid} {
+        allow get: if isSignedIn() && isValidId(roomId) && isValidId(studentUid) && (
+          studentUid == request.auth.uid ||
+          isClassHost(roomId) ||
+          isAdmin()
+        );
+        allow list: if isSignedIn() && (
+          resource.data.uid == request.auth.uid ||
+          isClassHost(roomId) ||
+          isAdmin()
+        );
+        allow create: if isVerifiedUser() && isValidId(roomId) && isValidId(studentUid)
+          && studentUid == request.auth.uid
+          && isValidClassWaitingEntry(incoming())
+          && (!isSystemLockedDown() || isAdmin())
+          && incoming().uid == request.auth.uid
+          && incoming().roomId == roomId
+          && incoming().requestedAt == request.time
+          && exists(/databases/$(database)/documents/classes/$(roomId));
+        allow update: if false;
+        allow delete: if isSignedIn() && isValidId(roomId) && isValidId(studentUid) && (
+          studentUid == request.auth.uid ||
+          isClassHost(roomId) ||
+          isAdmin()
+        );
+      }
+
+      match /messages/{messageId} {
+        allow get: if isSignedIn() && isValidId(roomId) && isValidId(messageId) && (
+          isClassHost(roomId) ||
+          isClassParticipant(roomId) ||
+          isAdmin()
+        );
+        allow list: if isSignedIn() && (
+          isClassHost(roomId) ||
+          isClassParticipant(roomId) ||
+          isAdmin()
+        );
+        allow create: if isVerifiedUser() && isValidId(roomId) && isValidId(messageId)
+          && isValidClassChatMessage(incoming())
+          && (!isSystemLockedDown() || isAdmin())
+          && incoming().id == messageId
+          && incoming().roomId == roomId
+          && incoming().senderId == request.auth.uid
+          && incoming().sentAt == request.time
+          && (isClassHost(roomId) || isClassParticipant(roomId));
+        allow update, delete: if isAdmin();
+      }
     }
   }
 }

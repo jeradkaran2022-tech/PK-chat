@@ -78,6 +78,7 @@ import { FestivalCanvasOverlay } from './FestivalCanvasOverlay';
 import { PeaceUnityWatermark } from './PeaceUnityWatermark';
 import { TajMahalTributeModal } from './TajMahalTributeModal';
 import { WazeNavigationModal } from './WazeNavigationModal';
+import { MessengerDisasterAlerts } from './MessengerDisasterAlerts';
 import { QrCodeModal, QrModalInitialTab } from './QrCodeModal';
 import {
   compressChatPhoto,
@@ -2977,6 +2978,8 @@ export function ChatWorkspace() {
           )}
         </div>
       </div>
+
+      <MessengerDisasterAlerts maxVisible={2} />
 
       {/* Floating Viber Emoji Overlay Layer */}
       {floatingEmojis.length > 0 && (
