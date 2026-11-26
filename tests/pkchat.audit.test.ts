@@ -3697,6 +3697,12 @@ async function main() {
     assert.ok(manifest.icons.some((i) => i.src === 'icon-512.png' && i.sizes === '512x512' && i.purpose === 'any'));
     assert.ok(manifest.icons.some((i) => i.src === 'pwa-maskable-512x512.png' && i.sizes === '512x512' && i.purpose === 'maskable'));
     assert.ok(manifest.icons.some((i) => i.src === 'icon-192.png' && i.sizes === '192x192' && i.purpose === 'any'));
+    assert.ok(manifest.icons.some((i) => i.src === 'pwa-maskable-192x192.png' && i.sizes === '192x192' && i.purpose === 'maskable'));
+    for (const density of ['mdpi', 'hdpi', 'xhdpi', 'xxhdpi', 'xxxhdpi']) {
+      for (const name of ['ic_launcher.png', 'ic_launcher_foreground.png', 'ic_launcher_round.png']) {
+        assert.ok(fs.existsSync(path.join(process.cwd(), 'android/res', `mipmap-${density}`, name)));
+      }
+    }
 
     const indexHtml = fs.readFileSync(path.join(process.cwd(), 'index.html'), 'utf8');
     assert.ok(indexHtml.includes('<link rel="manifest" href="./manifest.json" />'));
