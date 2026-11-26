@@ -1,0 +1,23 @@
+{
+  "firebaseProjectId": "pkchat-41ef3",
+  "repository": "jeradkaran2022-tech/PK-chat",
+  "pwaUrl": "https://jeradkaran2022-tech.github.io/PK-chat/",
+  "webManifestUrl": "https://jeradkaran2022-tech.github.io/PK-chat/manifest.json",
+  "host": "jeradkaran2022-tech.github.io",
+  "startUrl": "/PK-chat/",
+  "scope": "/PK-chat/",
+  "packageId": "com.jeradkaran2022tech.pkchat.twa",
+  "appName": "PK Chat",
+  "launcherName": "PK Chat",
+  "display": "standalone",
+  "themeColor": "#0A192F",
+  "navigationColor": "#0A192F",
+  "backgroundColor": "#0A192F",
+  "iconUrl": "https://jeradkaran2022-tech.github.io/PK-chat/icon-512.png",
+  "maskableIconUrl": "https://jeradkaran2022-tech.github.io/PK-chat/pwa-maskable-512x512.png",
+  "icon192Url": "https://jeradkaran2022-tech.github.io/PK-chat/icon-192.png",
+  "maskableIcon192Url": "https://jeradkaran2022-tech.github.io/PK-chat/pwa-maskable-192x192.png",
+  "fallbackType": "customtabs",
+  "enableNotifications": true,
+  "signingMode": "new"
+}
