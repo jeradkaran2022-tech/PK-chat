@@ -1,5 +1,10 @@
 import { initializeApp } from 'firebase/app';
-import { browserLocalPersistence, getAuth, setPersistence } from 'firebase/auth';
+import {
+  GoogleAuthProvider,
+  browserLocalPersistence,
+  getAuth,
+  setPersistence,
+} from 'firebase/auth';
 import {
   Firestore,
   doc,
@@ -13,6 +18,7 @@ import { getStorage } from 'firebase/storage';
 import firebaseConfig from '../../firebase-applet-config.json';
 
 const app = initializeApp(firebaseConfig);
+export const firebaseProjectId = firebaseConfig.projectId;
 
 function createResilientFirestore(): Firestore {
   try {
@@ -44,14 +50,28 @@ function createResilientFirestore(): Firestore {
 export const db = createResilientFirestore();
 export const auth = getAuth(app);
 export const storage = getStorage(app);
+
+export function createGoogleAuthProvider(scopes: string[] = []): GoogleAuthProvider {
+  const provider = new GoogleAuthProvider();
+  scopes.forEach((scope) => provider.addScope(scope));
+  provider.setCustomParameters({ prompt: 'select_account' });
+  return provider;
+}
+
+export const googleAuthProvider = createGoogleAuthProvider();
+
+export const authPersistenceReady: Promise<void> = setPersistence(
+  auth,
+  browserLocalPersistence
+).catch(() => {
+  // Fallback handled by Firebase Auth SDK if storage is restricted
+});
+
 export {
   loginWithFirebasePhoneOrEmail,
   type FirebaseLoginRequest,
   type FirebaseLoginResult,
 } from './pkExperienceController';
-setPersistence(auth, browserLocalPersistence).catch(() => {
-  // Fallback handled by Firebase Auth SDK if storage is restricted
-});
 
 export enum OperationType {
   CREATE = 'create',

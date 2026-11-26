@@ -4,8 +4,10 @@ import {
   GoogleAuthProvider,
   RecaptchaVerifier,
   User,
+  browserLocalPersistence,
   getRedirectResult,
   onAuthStateChanged,
+  setPersistence,
   signInAnonymously,
   signInWithPopup,
   signInWithRedirect,
@@ -77,6 +79,8 @@ import { WORLD_LANGUAGES_CATALOG } from '../data/worldLanguages';
 import {
   OperationType,
   auth,
+  authPersistenceReady,
+  createGoogleAuthProvider,
   db,
   handleFirestoreError,
   isTransientFirestoreError,
@@ -159,6 +163,7 @@ import {
   mapOAuthSignInError,
   normalizePhoneToE164,
   sendFirebasePhoneOtp,
+  shouldFallbackToRedirect,
 } from '../lib/phoneAuth';
 import {
   isVipFounderFreeNumber,
@@ -827,12 +832,27 @@ export function PkChatProvider({ children }: { children: React.ReactNode }) {
       void retryConnection();
     };
     window.addEventListener('online', onOnline);
-    getRedirectResult(auth).catch((err) => {
-      if (err && typeof err === 'object' && 'code' in err) {
-        const msg = (err as { message?: string }).message;
-        if (msg) setOtpError(msg);
-      }
-    });
+    authPersistenceReady
+      .then(() => getRedirectResult(auth))
+      .then((redirectRes) => {
+        if (redirectRes?.user) {
+          setFirebaseUser(redirectRes.user);
+          setOtpError(null);
+          setOtpErrorCode(null);
+          setOtpStatusMessage('Google Sign-In completed! Loading PK Chat...');
+          const deepClassRoom =
+            typeof window !== 'undefined' ? parseClassRoomFromInput(window.location.href) : null;
+          setActiveScreenState(deepClassRoom ? 'class_room' : 'home');
+        }
+      })
+      .catch((err) => {
+        if (err && typeof err === 'object') {
+          const fbErr = err as { code?: string; message?: string };
+          const friendly = mapOAuthSignInError(fbErr, 'Google');
+          setOtpErrorCode(fbErr.code || 'auth/redirect-failed');
+          setOtpError(friendly);
+        }
+      });
     getOrCreateE2eeKeyPair()
       .then(({ publicKeyBase64, fingerprint }) => {
         setE2eePubKey(publicKeyBase64);
@@ -845,7 +865,7 @@ export function PkChatProvider({ children }: { children: React.ReactNode }) {
     };
   }, [retryConnection]);
 
-  // Sequential onboarding resume check: only jump directly to home once full setup (or prior verified phone+profile) is complete
+  // Authenticated session resume check: enter PK Chat dashboard immediately after Google/Gmail or phone sign-in
   useEffect(() => {
     if (!authReady) return;
     if (!firebaseUser) {
@@ -862,12 +882,16 @@ export function PkChatProvider({ children }: { children: React.ReactNode }) {
     }
     try {
       const seqDone = localStorage.getItem(`pk_seq_onboarding_done_${firebaseUser.uid}`) === '1';
+      const isGoogleOrEmailUser = Boolean(
+        firebaseUser.email ||
+          firebaseUser.providerData?.some((p) => p.providerId === 'google.com')
+      );
       const hasCompleteCloudAccount = Boolean(
-        userProfile && (userAccount?.phoneNumber || firebaseUser.phoneNumber)
+        userProfile && (isGoogleOrEmailUser || userAccount?.phoneNumber || firebaseUser.phoneNumber)
       );
       if (
-        (seqDone || hasCompleteCloudAccount) &&
-        (activeScreen === 'splash' || activeScreen === 'welcome')
+        (seqDone || hasCompleteCloudAccount || isGoogleOrEmailUser) &&
+        (activeScreen === 'splash' || activeScreen === 'welcome' || activeScreen === 'phone_register')
       ) {
         const deepClassRoom =
           typeof window !== 'undefined' ? parseClassRoomFromInput(window.location.href) : null;
@@ -1120,7 +1144,12 @@ export function PkChatProvider({ children }: { children: React.ReactNode }) {
         setUserAccountLoaded(true);
         setUserProfile(existingProfile);
 
-        let seqAlreadyCompleted = Boolean(refreshedUser?.phoneNumber || user.phoneNumber);
+        let seqAlreadyCompleted = Boolean(
+          refreshedUser?.phoneNumber ||
+            user.phoneNumber ||
+            user.email ||
+            user.providerData?.some((p) => p.providerId === 'google.com')
+        );
         try {
           if (localStorage.getItem(`pk_seq_onboarding_done_${uid}`) === '1') {
             seqAlreadyCompleted = true;
@@ -1132,13 +1161,17 @@ export function PkChatProvider({ children }: { children: React.ReactNode }) {
         }
 
         if (seqAlreadyCompleted) {
+          const deepClassRoom =
+            typeof window !== 'undefined' ? parseClassRoomFromInput(window.location.href) : null;
           setActiveScreenState((prev) =>
             prev === 'splash' ||
             prev === 'welcome' ||
             prev === 'phone_register' ||
             prev === 'profile_create' ||
             prev === 'language_select'
-              ? 'home'
+              ? deepClassRoom
+                ? 'class_room'
+                : 'home'
               : prev
           );
         }
@@ -1383,8 +1416,14 @@ export function PkChatProvider({ children }: { children: React.ReactNode }) {
         });
         setUserAccountLoaded(true);
         setUserProfile(profilePayload);
-        const isPhoneReadyNow = Boolean(claimedPhone || user.phoneNumber || user.isAnonymous);
-        if (isPhoneReadyNow) {
+        const isAuthenticatedReadyNow = Boolean(
+          claimedPhone ||
+            user.phoneNumber ||
+            user.email ||
+            user.isAnonymous ||
+            user.providerData?.some((p) => p.providerId === 'google.com')
+        );
+        if (isAuthenticatedReadyNow) {
           try {
             localStorage.setItem(`pk_seq_onboarding_done_${uid}`, '1');
           } catch {
@@ -1403,16 +1442,61 @@ export function PkChatProvider({ children }: { children: React.ReactNode }) {
     [claimUniquePhoneTransaction, currentDeviceId, setPendingFullName, setPendingLang, setPendingPhone]
   );
 
-  // Auth listener with Email-first auto-account onboarding (No Phone OTP required)
+  // Auth listener with Email/Gmail-first auto-account onboarding (immediate dashboard entry on sign-in)
   useEffect(() => {
     const unsub = onAuthStateChanged(auth, async (user) => {
       setFirebaseUser(user);
       setAuthReady(true);
       if (user) {
+        setOtpError(null);
+        setOtpErrorCode(null);
         try {
           await provisionEmailVerifiedAccount(user);
-        } catch {
-          // Listener below will also hydrate
+        } catch (err) {
+          console.warn('Firestore profile bootstrap fallback after auth:', err);
+          // Even if Firestore is temporarily slow/offline right after sign-in, enter the dashboard cleanly
+          const countryCfg = selectedCountryRef.current;
+          const fallbackName = (
+            user.displayName ||
+            (user.email ? user.email.split('@')[0].replace(/[._-]+/g, ' ').trim() : '') ||
+            'PK Chat Member'
+          ).slice(0, 100);
+          setUserAccount((prev) =>
+            prev || {
+              uid: user.uid,
+              email: user.email || undefined,
+              phoneNumber: user.phoneNumber || undefined,
+              country: countryCfg.name,
+              countryDialCode: countryCfg.dialCode,
+              recoveryEmail: user.email || undefined,
+              phoneDiscoveryEnabled: false,
+              accountStatus: 'active',
+            }
+          );
+          setUserAccountLoaded(true);
+          setUserProfile((prev) =>
+            prev || {
+              uid: user.uid,
+              fullName: fallbackName,
+              about: 'Hey there! I am using PK CHAT.',
+              avatarUrl: user.photoURL || '',
+              country: countryCfg.name,
+              countryCode: countryCfg.code,
+              preferredLanguage: 'en',
+              preferredLanguageName: 'English',
+              e2eePublicKey: e2eePubKeyRef.current || '',
+              onlineStatus: isIntentionalDataOff() ? 'offline' : 'online',
+            }
+          );
+          const deepClassRoom =
+            typeof window !== 'undefined' ? parseClassRoomFromInput(window.location.href) : null;
+          setActiveScreenState((prev) =>
+            prev === 'splash' || prev === 'welcome' || prev === 'phone_register'
+              ? deepClassRoom
+                ? 'class_room'
+                : 'home'
+              : prev
+          );
         }
       } else {
         setGmailAccessToken(null);
@@ -2728,25 +2812,54 @@ export function PkChatProvider({ children }: { children: React.ReactNode }) {
     }
     setOtpError(null);
     setOtpErrorCode(null);
-    const provider = new GoogleAuthProvider();
-    provider.setCustomParameters({ prompt: 'select_account' });
+    setOtpStatusMessage('Opening Google Sign-In...');
+
+    await authPersistenceReady;
+    await setPersistence(auth, browserLocalPersistence).catch(() => {});
+
+    const provider = createGoogleAuthProvider();
     const loginRes = await loginWithFirebasePhoneOrEmail({
       authInstance: auth,
       signInFn: (authInst, prov) => signInWithPopup(authInst, prov),
       credential: provider,
     });
+
     if (loginRes.ok) {
+      setOtpStatusMessage(null);
+      const signedInUser = (loginRes.user as { user?: User } | null)?.user || auth.currentUser;
+      if (signedInUser) {
+        setFirebaseUser(signedInUser);
+        await provisionEmailVerifiedAccount(signedInUser).catch(() => {});
+      }
       return;
     }
-    if (loginRes.code === 'auth/popup-blocked') {
-      await signInWithRedirect(auth, provider);
-      return;
+
+    if (shouldFallbackToRedirect({ code: loginRes.code, message: loginRes.message })) {
+      setOtpStatusMessage(
+        `Popup sign-in unavailable (${loginRes.code}). Redirecting to Google Sign-In...`
+      );
+      try {
+        await signInWithRedirect(auth, provider);
+        return;
+      } catch (redirectErr) {
+        const fbRedirectErr = redirectErr as { code?: string; message?: string };
+        const friendly = mapOAuthSignInError(fbRedirectErr, 'Google');
+        setOtpStatusMessage(null);
+        setOtpErrorCode(fbRedirectErr?.code || 'auth/redirect-failed');
+        setOtpError(friendly);
+        throw new Error(friendly);
+      }
     }
-    const friendly = mapOAuthSignInError({ code: loginRes.code, message: loginRes.message }, 'Google');
+
+    const friendly = mapOAuthSignInError(
+      { code: loginRes.code, message: loginRes.message },
+      'Google'
+    );
+    setOtpStatusMessage(null);
     setOtpErrorCode(loginRes.code || 'auth/google-signin-failed');
     setOtpError(friendly);
     throw new Error(friendly);
-  }, [globalSecurityState.status]);
+  }, [globalSecurityState.status, provisionEmailVerifiedAccount]);
 
   const connectOwnerGmail = useCallback(async (): Promise<boolean> => {
     const provider = new GoogleAuthProvider();

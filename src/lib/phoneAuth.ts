@@ -411,29 +411,62 @@ export async function hashPhoneE164(phoneE164: string): Promise<string> {
 }
 
 /**
- * Maps Google / Apple OAuth popup errors into clear, user-friendly guidance.
+ * Determines whether a Google/OAuth popup failure should automatically fall back
+ * to signInWithRedirect (for popup blockers, mobile browsers, PWAs, and Android TWA APKs).
+ */
+export function shouldFallbackToRedirect(err: unknown): boolean {
+  const fbErr = err as { code?: string; message?: string };
+  const code = String(fbErr?.code || '').trim();
+  const msg = String(fbErr?.message || '').toLowerCase();
+  if (
+    code === 'auth/popup-blocked' ||
+    code === 'auth/popup-closed-by-user' ||
+    code === 'auth/cancelled-popup-request' ||
+    code === 'auth/operation-not-supported-in-this-environment' ||
+    code === 'auth/web-storage-unsupported'
+  ) {
+    return true;
+  }
+  return (
+    msg.includes('popup') ||
+    msg.includes('not supported in this environment') ||
+    msg.includes('cross-origin') ||
+    msg.includes('third-party')
+  );
+}
+
+/**
+ * Maps OAuth (Google/Apple) Firebase Auth errors into a clear, visible message
+ * that always preserves the exact Firebase error.code and error.message.
  */
 export function mapOAuthSignInError(err: unknown, providerName: 'Google' | 'Apple'): string {
   const fbErr = err as { code?: string; message?: string };
-  const code = fbErr?.code || '';
+  const code = String(fbErr?.code || 'auth/unknown').trim();
+  const rawMessage = String(fbErr?.message || `${providerName} sign-in failed.`).trim();
+  const host = typeof window !== 'undefined' ? window.location.hostname : 'this domain';
+  const details = `[${code}] ${rawMessage}`;
+
   switch (code) {
     case 'auth/popup-closed-by-user':
     case 'auth/cancelled-popup-request':
-      return `${providerName} sign-in window was closed before completing login.`;
+      return `${providerName} sign-in window was closed before completing login. ${details}`;
     case 'auth/popup-blocked':
-      return `Your browser blocked the ${providerName} sign-in popup. Allow popups for this site and retry.`;
+      return `Your browser blocked the ${providerName} sign-in popup. Allow popups or continue via redirect. ${details}`;
+    case 'auth/operation-not-supported-in-this-environment':
+    case 'auth/web-storage-unsupported':
+      return `${providerName} popup sign-in is unsupported in this mobile/TWA WebView environment. ${details}`;
     case 'auth/network-request-failed':
-      return 'Network error during sign-in. Please check your internet connection and retry.';
+      return `Network error during ${providerName} sign-in. Check your internet connection and retry. ${details}`;
     case 'auth/too-many-requests':
-      return 'Too many sign-in attempts detected. Wait a minute and try again.';
+      return `Too many sign-in attempts detected. Wait a minute and try again. ${details}`;
     case 'auth/operation-not-allowed':
-      return `${providerName} Sign-In is not enabled yet in Firebase Console (pk-chhat → Authentication → Sign-in method → ${providerName}).`;
+      return `${providerName} Sign-In is disabled in Firebase Console (pkchat-41ef3 → Authentication → Sign-in method → ${providerName}). ${details}`;
     case 'auth/unauthorized-domain':
-      return `Domain ${window.location.hostname} is not authorized in Firebase Console.`;
+      return `Domain "${host}" is not authorized in Firebase Console (pkchat-41ef3 → Authentication → Settings → Authorized domains). ${details}`;
     case 'auth/account-exists-with-different-credential':
-      return 'An account already exists with this email using a different sign-in method. Sign in with your original method.';
+      return `An account already exists with this email using a different sign-in method. ${details}`;
     default:
-      return fbErr?.message || `${providerName} sign-in failed. Please try again.`;
+      return `${providerName} Sign-In failed: ${details}`;
   }
 }
 

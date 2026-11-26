@@ -436,9 +436,16 @@ export function OnboardingFlow() {
     setAuthBusy(true);
     try {
       await signInWithGoogle();
-      setLocalSuccess('Gmail account signed in! Proceed to Step 2: Photo Verification.');
+      setLocalSuccess('Gmail account signed in! Opening PK Chat...');
     } catch (err) {
-      setLocalError(err instanceof Error ? err.message : 'Google Sign-In failed. Please try again.');
+      const fbErr = err as { code?: string; message?: string };
+      const code = fbErr?.code ? `[${fbErr.code}] ` : '';
+      const rawMsg =
+        err instanceof Error && err.message
+          ? err.message
+          : 'Google Sign-In failed. Please try again.';
+      const visibleMsg = rawMsg.includes('[auth/') ? rawMsg : `${code}${rawMsg}`;
+      setLocalError(visibleMsg);
     } finally {
       setAuthBusy(false);
     }
@@ -746,6 +753,25 @@ export function OnboardingFlow() {
                     <span>{authBusy ? 'Signing in with Gmail...' : 'Continue with Gmail Account'}</span>
                   </button>
 
+                  {otpStatusMessage && !localError && !otpError && (
+                    <div
+                      role="status"
+                      className="p-3 rounded-xl bg-sky-50 border border-[#7dd3fc] text-xs font-medium text-[#0369a1]"
+                    >
+                      {otpStatusMessage}
+                    </div>
+                  )}
+
+                  {(localError || otpError) && (
+                    <div
+                      role="alert"
+                      className="p-3 rounded-xl bg-rose-50 border border-rose-300 text-xs font-medium text-rose-800 break-words space-y-1"
+                    >
+                      <p className="font-bold">Google Sign-In Error</p>
+                      <p>{localError || otpError}</p>
+                    </div>
+                  )}
+
                   {!firebaseUser && (
                     <div className="pt-2 border-t border-slate-100 flex flex-wrap items-center justify-between gap-2 text-[11px] text-slate-500">
                       <button
@@ -1003,7 +1029,7 @@ export function OnboardingFlow() {
                     <span>
                       {isVipFounderFreeNumber(phoneLocal || pendingPhone)
                         ? '👑 VIP Founder · Lifetime Free Access'
-                        : '30-Day Free Trial · Then $10/year'}
+                        : '90-Day Free Trial · Then $10/year'}
                     </span>
                   </div>
                 </div>

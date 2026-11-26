@@ -49,7 +49,9 @@ import {
   detectOperatingCountryContext,
   hashPhoneE164,
   isWebPreviewTestPhoneBypass,
+  mapOAuthSignInError,
   normalizePhoneToE164,
+  shouldFallbackToRedirect,
   validatePhoneMatchesOperatingCountry,
 } from '../src/lib/phoneAuth';
 import {
@@ -3724,6 +3726,41 @@ async function main() {
     const constantsSrc = fs.readFileSync(path.join(process.cwd(), 'src/data/constants.ts'), 'utf8');
     assert.equal(constantsSrc.includes("'/assets/aistudio/"), false, 'BRAND_LOGO_URL must not hardcode a root leading slash');
     assert.ok(fs.existsSync(path.join(process.cwd(), 'public/.nojekyll')));
+  });
+
+  await runCase('Firebase Google Sign-In (pkchat-41ef3): popup->redirect fallback, browserLocalPersistence, getRedirectResult & exact error.code/message', () => {
+    const fbCfg = JSON.parse(fs.readFileSync(path.join(process.cwd(), 'firebase-applet-config.json'), 'utf8')) as {
+      projectId: string;
+      authDomain: string;
+    };
+    assert.equal(fbCfg.projectId, 'pkchat-41ef3');
+    assert.equal(fbCfg.authDomain, 'pkchat-41ef3.firebaseapp.com');
+
+    assert.equal(shouldFallbackToRedirect({ code: 'auth/popup-blocked' }), true);
+    assert.equal(shouldFallbackToRedirect({ code: 'auth/popup-closed-by-user' }), true);
+    assert.equal(shouldFallbackToRedirect({ code: 'auth/cancelled-popup-request' }), true);
+    assert.equal(shouldFallbackToRedirect({ code: 'auth/operation-not-supported-in-this-environment' }), true);
+    assert.equal(shouldFallbackToRedirect({ code: 'auth/web-storage-unsupported' }), true);
+    assert.equal(shouldFallbackToRedirect({ code: 'auth/unauthorized-domain', message: 'Domain not authorized' }), false);
+
+    const unauthMsg = mapOAuthSignInError(
+      { code: 'auth/unauthorized-domain', message: 'Firebase: Error (auth/unauthorized-domain).' },
+      'Google'
+    );
+    assert.ok(unauthMsg.includes('[auth/unauthorized-domain]'));
+    assert.ok(unauthMsg.includes('pkchat-41ef3'));
+    assert.ok(unauthMsg.includes('Firebase: Error (auth/unauthorized-domain).'));
+
+    const fbSrc = fs.readFileSync(path.join(process.cwd(), 'src/lib/firebase.ts'), 'utf8');
+    const ctxSrc = fs.readFileSync(path.join(process.cwd(), 'src/context/PkChatContext.tsx'), 'utf8');
+    const onboardSrc = fs.readFileSync(path.join(process.cwd(), 'src/components/OnboardingFlow.tsx'), 'utf8');
+    assert.ok(fbSrc.includes('GoogleAuthProvider'));
+    assert.ok(fbSrc.includes('browserLocalPersistence'));
+    assert.ok(fbSrc.includes('authPersistenceReady'));
+    assert.ok(ctxSrc.includes('shouldFallbackToRedirect'));
+    assert.ok(ctxSrc.includes('signInWithRedirect(auth, provider)'));
+    assert.ok(ctxSrc.includes('getRedirectResult(auth)'));
+    assert.ok(onboardSrc.includes('Google Sign-In Error'));
   });
 
   const passedCount = results.filter((r) => r.passed).length;
