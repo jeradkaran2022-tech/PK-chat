@@ -751,8 +751,52 @@ export function OnboardingFlow() {
                       <span>Step 1 of 3 · Sign in with Gmail Account</span>
                     </h2>
                     <p className="text-xs text-slate-600">
-                      Start with your Gmail account first for verified cloud sync and account recovery, followed by photo &amp; country-matched phone verification.
+                      Start with your Gmail account for instant WhatsApp-style cloud entry, or choose your mode below. Includes 90-day Free Trial &amp; VIP Founder Life Limit Free Access.
                     </p>
+                  </div>
+
+                  {/* Quick Mode Selection right on Welcome */}
+                  <div className="grid grid-cols-2 gap-2">
+                    <button
+                      type="button"
+                      data-mode="general"
+                      aria-pressed={userModeChoice === 'general'}
+                      onClick={() => {
+                        setUserModeChoice('general');
+                        setActiveUserMode('general', firebaseUser?.uid);
+                        setLocalError(null);
+                      }}
+                      className={`mode-btn min-h-[44px] px-3 py-2 rounded-xl border text-left transition-all ${
+                        userModeChoice === 'general'
+                          ? 'bg-[#0284c7] border-[#0284c7] text-white shadow-xs'
+                          : 'bg-[#ebf6ff]/85 border-[#7dd3fc]/70 text-slate-800 hover:border-[#0284c7]'
+                      }`}
+                    >
+                      <p className="text-xs font-bold leading-tight">General Use Mode</p>
+                      <p className={`text-[10px] leading-tight mt-0.5 ${userModeChoice === 'general' ? 'text-sky-100' : 'text-slate-500'}`}>
+                        Chat, Calls, SOS &amp; AI Translate
+                      </p>
+                    </button>
+                    <button
+                      type="button"
+                      data-mode="business"
+                      aria-pressed={userModeChoice === 'business'}
+                      onClick={() => {
+                        setUserModeChoice('business');
+                        setActiveUserMode('business', firebaseUser?.uid);
+                        setLocalError(null);
+                      }}
+                      className={`mode-btn min-h-[44px] px-3 py-2 rounded-xl border text-left transition-all ${
+                        userModeChoice === 'business'
+                          ? 'bg-[#0A192F] border-[#0A192F] text-white shadow-xs'
+                          : 'bg-[#ebf6ff]/85 border-[#7dd3fc]/70 text-slate-800 hover:border-[#0284c7]'
+                      }`}
+                    >
+                      <p className="text-xs font-bold leading-tight">Business / Advertiser Mode</p>
+                      <p className={`text-[10px] leading-tight mt-0.5 ${userModeChoice === 'business' ? 'text-sky-200' : 'text-slate-500'}`}>
+                        Chat + Global Ad Campaigns
+                      </p>
+                    </button>
                   </div>
 
                   <button
@@ -765,42 +809,44 @@ export function OnboardingFlow() {
                     <span>{authBusy ? 'Signing in with Gmail...' : 'Continue with Gmail Account'}</span>
                   </button>
 
-                  {otpStatusMessage && !localError && !otpError && (
-                    <div
-                      role="status"
-                      className="p-3 rounded-xl bg-sky-50 border border-[#7dd3fc] text-xs font-medium text-[#0369a1]"
-                    >
-                      {otpStatusMessage}
-                    </div>
-                  )}
-
-                  {(localError || otpError) && (
-                    <div
-                      role="alert"
-                      className="p-3.5 rounded-xl bg-rose-50 border border-rose-300 text-xs font-medium text-rose-800 break-words space-y-2.5"
-                    >
-                      <p className="font-bold">Google Sign-In Error</p>
-                      <p>{localError || otpError}</p>
-                      <div className="flex flex-wrap items-center gap-2 pt-1">
-                        <button
-                          type="button"
-                          disabled={authBusy || isLockedDown}
-                          onClick={handleGoogleSignIn}
-                          className="px-3 py-1.5 rounded-lg bg-rose-600 hover:bg-rose-700 text-white text-[11px] font-bold"
-                        >
-                          Retry Gmail Sign-In
-                        </button>
-                        <button
-                          type="button"
-                          disabled={authBusy || isLockedDown}
-                          onClick={handleInstantStartChat}
-                          className="px-3 py-1.5 rounded-lg bg-[#0284c7] hover:bg-[#0369a1] text-white text-[11px] font-bold"
-                        >
-                          Continue into PK Chat Now
-                        </button>
+                  <div id="inline-msg-panel" className="space-y-2.5" aria-live="polite">
+                    {otpStatusMessage && !localError && !otpError && (
+                      <div
+                        role="status"
+                        className="p-3 rounded-xl bg-sky-50 border border-[#7dd3fc] text-xs font-medium text-[#0369a1]"
+                      >
+                        {otpStatusMessage}
                       </div>
-                    </div>
-                  )}
+                    )}
+
+                    {(localError || otpError) && (
+                      <div
+                        role="alert"
+                        className="p-3.5 rounded-xl bg-rose-50 border border-rose-300 text-xs font-medium text-rose-800 break-words space-y-2.5"
+                      >
+                        <p className="font-bold">Google Sign-In Error</p>
+                        <p>{localError || otpError}</p>
+                        <div className="flex flex-wrap items-center gap-2 pt-1">
+                          <button
+                            type="button"
+                            disabled={authBusy || isLockedDown}
+                            onClick={handleGoogleSignIn}
+                            className="px-3 py-1.5 rounded-lg bg-rose-600 hover:bg-rose-700 text-white text-[11px] font-bold"
+                          >
+                            Retry Gmail Sign-In
+                          </button>
+                          <button
+                            type="button"
+                            disabled={authBusy || isLockedDown}
+                            onClick={handleInstantStartChat}
+                            className="px-3 py-1.5 rounded-lg bg-[#0284c7] hover:bg-[#0369a1] text-white text-[11px] font-bold"
+                          >
+                            Continue into PK Chat Now
+                          </button>
+                        </div>
+                      </div>
+                    )}
+                  </div>
 
                   {!firebaseUser && (
                     <div className="pt-2 border-t border-slate-100 flex flex-wrap items-center justify-between gap-2 text-[11px] text-slate-500">

@@ -8,6 +8,11 @@
   "start_url": "/PK-chat/",
   "scope": "/PK-chat/",
   "display": "standalone",
+  "display_override": ["standalone", "fullscreen", "minimal-ui"],
+  "launch_handler": {
+    "client_mode": "focus-existing"
+  },
+  "prefer_related_applications": false,
   "orientation": "any",
   "theme_color": "#0A192F",
   "background_color": "#0A192F",

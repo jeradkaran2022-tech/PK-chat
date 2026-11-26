@@ -1,5 +1,6 @@
 import tailwindcss from '@tailwindcss/vite';
 import react from '@vitejs/plugin-react';
+import fs from 'fs';
 import path from 'path';
 import {defineConfig} from 'vite';
 import {VitePWA} from 'vite-plugin-pwa';
@@ -31,6 +32,17 @@ export default defineConfig(() => {
           type: 'module',
         },
       }),
+      {
+        name: 'pkchat-github-pages-404',
+        closeBundle() {
+          const distDir = path.resolve(__dirname, 'dist');
+          const indexHtmlPath = path.join(distDir, 'index.html');
+          const fallback404Path = path.join(distDir, '404.html');
+          if (fs.existsSync(indexHtmlPath)) {
+            fs.copyFileSync(indexHtmlPath, fallback404Path);
+          }
+        },
+      },
     ],
     resolve: {
       alias: {

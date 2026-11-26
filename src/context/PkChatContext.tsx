@@ -1496,7 +1496,10 @@ export function PkChatProvider({ children }: { children: React.ReactNode }) {
           const deepClassRoom =
             typeof window !== 'undefined' ? parseClassRoomFromInput(window.location.href) : null;
           setActiveScreenState((prev) =>
-            prev === 'splash' || prev === 'welcome' || prev === 'phone_register'
+            prev === 'splash' ||
+            prev === 'welcome' ||
+            prev === 'phone_register' ||
+            prev === 'language_select'
               ? deepClassRoom
                 ? 'class_room'
                 : 'home'

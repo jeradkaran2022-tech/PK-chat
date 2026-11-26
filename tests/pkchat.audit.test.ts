@@ -3684,6 +3684,15 @@ async function main() {
     assert.equal(manifest.start_url, '/PK-chat/');
     assert.equal(manifest.scope, '/PK-chat/');
     assert.equal(manifest.display, 'standalone');
+    assert.deepEqual(
+      (manifest as Record<string, unknown>).display_override,
+      ['standalone', 'fullscreen', 'minimal-ui']
+    );
+    assert.deepEqual(
+      (manifest as Record<string, unknown>).launch_handler,
+      { client_mode: 'focus-existing' }
+    );
+    assert.equal((manifest as Record<string, unknown>).prefer_related_applications, false);
     assert.equal(manifest.theme_color, '#0A192F');
     assert.equal(manifest.background_color, '#0A192F');
     assert.ok(Array.isArray(manifest.icons) && manifest.icons.length >= 3);
@@ -3711,6 +3720,8 @@ async function main() {
     assert.equal(indexHtml.includes('href="/manifest.json"'), false);
     assert.ok(indexHtml.includes('<meta name="theme-color" content="#0A192F" />'));
     assert.ok(indexHtml.includes('href="./favicon-32x32.png"'));
+    assert.ok(indexHtml.includes('href="./icon-192.png"'));
+    assert.ok(indexHtml.includes('href="./icon-512.png"'));
     assert.ok(indexHtml.includes('href="./apple-touch-icon.png"'));
     assert.equal(indexHtml.includes('href="/favicon-32x32.png"'), false);
     assert.equal(indexHtml.includes('href="/apple-touch-icon.png"'), false);
@@ -3719,6 +3730,8 @@ async function main() {
     assert.ok(viteConfig.includes("base: '/PK-chat/'"));
     assert.ok(viteConfig.includes('manifest: false'));
     assert.ok(viteConfig.includes("includeAssets: ['manifest.json']"));
+    assert.ok(viteConfig.includes('pkchat-github-pages-404'));
+    assert.ok(viteConfig.includes("path.join(distDir, '404.html')"));
 
     const mainSrc = fs.readFileSync(path.join(process.cwd(), 'src/main.tsx'), 'utf8');
     assert.ok(mainSrc.includes('appUpdater.ensureServiceWorkerRegistered()'));
@@ -3784,7 +3797,7 @@ async function main() {
     assert.ok(rulesSrc.includes('allow get: if isSignedIn() && isValidId(chatId) && (resource == null || request.auth.uid in existing().participantIds || isAdmin());'));
     assert.ok(rulesSrc.includes("'monthlyPriceUsd', 'autoRenew', 'trialStartAt', 'trialEndAt', 'currentPeriodEnd', 'updatedAt'"));
 
-    // Verify Start button & mode selection entry flow never traps users on "Authentication required."
+    // Verify Start button, mode selection & WhatsApp-style native launch flow never trap users
     const appSrc = fs.readFileSync(path.join(process.cwd(), 'src/App.tsx'), 'utf8');
     assert.ok(onboardSrc.includes('General Use Mode'));
     assert.ok(onboardSrc.includes('Business / Advertiser Mode'));
@@ -3793,6 +3806,7 @@ async function main() {
     assert.ok(onboardSrc.includes('Sign in with Gmail'));
     assert.ok(ctxSrc.includes('if (params.allowLocalFallback !== false)'));
     assert.ok(appSrc.includes('Enter PK CHAT Now'));
+    assert.ok(appSrc.includes('data-native-launch-screen="true"'));
   });
 
   const passedCount = results.filter((r) => r.passed).length;

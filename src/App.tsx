@@ -20,7 +20,7 @@ import { ErrorBoundary } from './components/ErrorBoundary';
 import { ClassWhiteboardView } from './components/ClassWhiteboardView';
 import { PKChatMirrorApp } from './components/PKChatMirrorApp';
 import { AppI18nProvider } from './lib/i18n';
-import { PK_WORLD_PEACE_WALLPAPER_URL } from './data/constants';
+import { BRAND_LOGO_URL, PK_WORLD_PEACE_WALLPAPER_URL } from './data/constants';
 
 const ONBOARDING_SCREENS = new Set([
   'splash',
@@ -44,6 +44,7 @@ function LocalizedAppShell() {
 function PkChatRouter() {
   const {
     activeScreen,
+    authReady,
     firebaseUser,
     isLocalPreviewSession,
     userProfile,
@@ -53,6 +54,39 @@ function PkChatRouter() {
     startTrialWithLanguage,
   } = usePkChat();
   const hasActiveSession = Boolean(firebaseUser || isLocalPreviewSession);
+
+  // WhatsApp-style native launch screen while persisted Firebase Auth session resolves
+  // Prevents flashing onboarding screens for signed-in returning users on Android TWA/PWA
+  if (!authReady && !hasActiveSession && ONBOARDING_SCREENS.has(activeScreen)) {
+    return (
+      <div
+        data-native-launch-screen="true"
+        className="min-h-[100dvh] w-full flex flex-col items-center justify-center bg-[#0A192F] text-white px-6 select-none"
+      >
+        <div className="flex flex-col items-center gap-5">
+          <div className="w-24 h-24 rounded-3xl overflow-hidden shadow-2xl ring-2 ring-sky-400/40 bg-[#0A192F]">
+            <img
+              src={BRAND_LOGO_URL}
+              alt="PK Chat"
+              className="w-full h-full object-cover"
+            />
+          </div>
+          <div className="text-center space-y-1">
+            <h1 className="font-display text-2xl font-extrabold tracking-tight text-white">
+              PK Chat
+            </h1>
+            <p className="text-xs font-medium text-sky-200/80">
+              One World, One Chat
+            </p>
+          </div>
+          <div
+            aria-label="Loading PK Chat session"
+            className="w-6 h-6 rounded-full border-2 border-sky-400 border-t-transparent animate-spin"
+          />
+        </div>
+      </div>
+    );
+  }
 
   // Onboarding screens (1-7) or unauthenticated states
   if (ONBOARDING_SCREENS.has(activeScreen)) {
