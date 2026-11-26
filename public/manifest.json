@@ -3,11 +3,15 @@
   "name": "PK Chat",
   "short_name": "PKchat",
   "description": "PK Chat — 24/7 Cloud Global Messaging with Real-Time Translation, Voice/Video Calls, SOS Alerts & Security Protection",
+  "dir": "ltr",
+  "lang": "en",
   "start_url": "/PK-chat/",
   "scope": "/PK-chat/",
   "display": "standalone",
+  "orientation": "any",
   "theme_color": "#0A192F",
   "background_color": "#0A192F",
+  "categories": ["social", "communication"],
   "icons": [
     {
       "src": "icon-192.png",

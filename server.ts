@@ -6784,6 +6784,16 @@ Rules:
       return res.download(zipPath, 'pk-chat-project.zip');
     });
 
+    app.get('/__download/pk-chat-pages-dist.zip', (_req, res) => {
+      const zipPath = '/tmp/pk-chat-pages-dist.zip';
+      if (!fs.existsSync(zipPath)) {
+        return res.status(404).json({ error: 'Build archive not found.' });
+      }
+      res.setHeader('Content-Type', 'application/zip');
+      res.setHeader('Cache-Control', 'no-store');
+      return res.download(zipPath, 'pk-chat-pages-dist.zip');
+    });
+
     const { createServer: createViteServer } = await import('vite');
     const vite = await createViteServer({
       base: '/',

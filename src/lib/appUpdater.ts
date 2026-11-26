@@ -246,7 +246,8 @@ class AppUpdateManager {
           `/api/app/version?clientVersion=${encodeURIComponent(PK_CHAT_CLIENT_VERSION)}`,
           { cache: 'no-store' }
         );
-        if (resp.ok) {
+        const contentType = resp.headers.get('content-type') || '';
+        if (resp.ok && contentType.includes('application/json')) {
           const data = (await resp.json()) as {
             latestVersion?: string;
             updateAvailable?: boolean;
