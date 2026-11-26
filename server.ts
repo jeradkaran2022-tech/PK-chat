@@ -6774,8 +6774,19 @@ Rules:
 
   // Vite middleware in development; static dist serving in production
   if (process.env.NODE_ENV !== 'production') {
+    app.get('/__download/pk-chat-project.zip', (_req, res) => {
+      const zipPath = '/tmp/pk-chat-project.zip';
+      if (!fs.existsSync(zipPath)) {
+        return res.status(404).json({ error: 'Archive not found.' });
+      }
+      res.setHeader('Content-Type', 'application/zip');
+      res.setHeader('Cache-Control', 'no-store');
+      return res.download(zipPath, 'pk-chat-project.zip');
+    });
+
     const { createServer: createViteServer } = await import('vite');
     const vite = await createViteServer({
+      base: '/',
       server: {
         middlewareMode: true,
         hmr: false,
@@ -6821,6 +6832,7 @@ Rules:
     app.use(vite.middlewares);
   } else {
     const distPath = path.resolve(__dirname, 'dist');
+    app.use('/PK-chat', express.static(distPath));
     app.use(express.static(distPath));
     app.get('*', (_req, res) => {
       res.sendFile(path.join(distPath, 'index.html'));

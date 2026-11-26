@@ -12,7 +12,12 @@ import {
   PK_WORLD_PEACE_WALLPAPER_ID,
 } from '../lib/appearanceTheme';
 
-export const BRAND_LOGO_URL = '/assets/aistudio/WhatsApp_Image_2026-11-18_at_4.59.42_PM_e151f1c5.jpeg';
+const APP_BASE_URL =
+  (typeof import.meta !== 'undefined' &&
+    (import.meta as unknown as { env?: { BASE_URL?: string } }).env?.BASE_URL) ||
+  './';
+
+export const BRAND_LOGO_URL = `${APP_BASE_URL}assets/aistudio/WhatsApp_Image_2026-11-18_at_4.59.42_PM_e151f1c5.jpeg`;
 export const PK_WORLD_PEACE_WALLPAPER_URL = wpWorldPeaceUrl;
 export { PK_SIGNATURE_WALLPAPER_URL };
 

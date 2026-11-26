@@ -3661,6 +3661,65 @@ async function main() {
     assert.ok(safetySrc.includes('<MessengerDisasterAlerts'));
   });
 
+  await runCase('PWA GitHub Pages & PWABuilder: public/manifest.json, relative icon-512.png/icon-192.png, index.html & vite.config.ts base /PK-chat/', () => {
+    const manifestPath = path.join(process.cwd(), 'public/manifest.json');
+    assert.ok(fs.existsSync(manifestPath), 'public/manifest.json must exist');
+    assert.equal(fs.existsSync(path.join(process.cwd(), 'manifest.json')), false, 'No duplicate root manifest.json');
+
+    const manifest = JSON.parse(fs.readFileSync(manifestPath, 'utf8')) as {
+      name: string;
+      short_name: string;
+      start_url: string;
+      scope: string;
+      display: string;
+      theme_color: string;
+      background_color: string;
+      icons: Array<{ src: string; sizes: string; type: string; purpose?: string }>;
+    };
+
+    assert.equal(manifest.name, 'PK Chat');
+    assert.equal(manifest.short_name, 'PKchat');
+    assert.equal(manifest.start_url, '/PK-chat/');
+    assert.equal(manifest.scope, '/PK-chat/');
+    assert.equal(manifest.display, 'standalone');
+    assert.equal(manifest.theme_color, '#0A192F');
+    assert.equal(manifest.background_color, '#0A192F');
+    assert.ok(Array.isArray(manifest.icons) && manifest.icons.length >= 3);
+
+    for (const icon of manifest.icons) {
+      assert.equal(icon.src.startsWith('/'), false, `Icon src must not have leading slash: ${icon.src}`);
+      const iconFile = path.join(process.cwd(), 'public', icon.src);
+      assert.ok(fs.existsSync(iconFile), `Icon file must exist in public/: ${icon.src}`);
+      const header = fs.readFileSync(iconFile).subarray(0, 8);
+      assert.deepEqual([...header], [0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a], `${icon.src} must be valid PNG`);
+    }
+
+    assert.ok(manifest.icons.some((i) => i.src === 'icon-512.png' && i.sizes === '512x512' && i.purpose === 'any'));
+    assert.ok(manifest.icons.some((i) => i.src === 'pwa-maskable-512x512.png' && i.sizes === '512x512' && i.purpose === 'maskable'));
+    assert.ok(manifest.icons.some((i) => i.src === 'icon-192.png' && i.sizes === '192x192' && i.purpose === 'any'));
+
+    const indexHtml = fs.readFileSync(path.join(process.cwd(), 'index.html'), 'utf8');
+    assert.ok(indexHtml.includes('<link rel="manifest" href="./manifest.json" />'));
+    assert.equal(indexHtml.includes('href="/manifest.json"'), false);
+    assert.ok(indexHtml.includes('<meta name="theme-color" content="#0A192F" />'));
+    assert.ok(indexHtml.includes('href="./favicon-32x32.png"'));
+    assert.ok(indexHtml.includes('href="./apple-touch-icon.png"'));
+    assert.equal(indexHtml.includes('href="/favicon-32x32.png"'), false);
+    assert.equal(indexHtml.includes('href="/apple-touch-icon.png"'), false);
+
+    const viteConfig = fs.readFileSync(path.join(process.cwd(), 'vite.config.ts'), 'utf8');
+    assert.ok(viteConfig.includes("base: '/PK-chat/'"));
+    assert.ok(viteConfig.includes('manifest: false'));
+    assert.ok(viteConfig.includes("includeAssets: ['manifest.json']"));
+
+    const mainSrc = fs.readFileSync(path.join(process.cwd(), 'src/main.tsx'), 'utf8');
+    assert.ok(mainSrc.includes('appUpdater.ensureServiceWorkerRegistered()'));
+
+    const constantsSrc = fs.readFileSync(path.join(process.cwd(), 'src/data/constants.ts'), 'utf8');
+    assert.equal(constantsSrc.includes("'/assets/aistudio/"), false, 'BRAND_LOGO_URL must not hardcode a root leading slash');
+    assert.ok(fs.existsSync(path.join(process.cwd(), 'public/.nojekyll')));
+  });
+
   const passedCount = results.filter((r) => r.passed).length;
   const failedCount = results.filter((r) => !r.passed).length;
   console.log(`\nSummary: ${passedCount} passed, ${failedCount} failed (total ${results.length})\n`);
