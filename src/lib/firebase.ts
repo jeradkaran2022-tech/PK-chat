@@ -1,4 +1,4 @@
-import { initializeApp } from 'firebase/app';
+import { getApp, getApps, initializeApp } from 'firebase/app';
 import {
   GoogleAuthProvider,
   browserLocalPersistence,
@@ -17,7 +17,7 @@ import {
 import { getStorage } from 'firebase/storage';
 import firebaseConfig from '../../firebase-applet-config.json';
 
-const app = initializeApp(firebaseConfig);
+export const app = getApps().length > 0 ? getApp() : initializeApp(firebaseConfig);
 export const firebaseProjectId = firebaseConfig.projectId;
 
 function createResilientFirestore(): Firestore {

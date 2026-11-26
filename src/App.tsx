@@ -47,8 +47,10 @@ function PkChatRouter() {
     firebaseUser,
     isLocalPreviewSession,
     userProfile,
-    userAccount,
     userAccountLoaded,
+    appLanguage,
+    appLanguageName,
+    startTrialWithLanguage,
   } = usePkChat();
   const hasActiveSession = Boolean(firebaseUser || isLocalPreviewSession);
 
@@ -69,7 +71,34 @@ function PkChatRouter() {
     activeScreen !== 'disaster_alerts' &&
     activeScreen !== 'help_support'
   ) {
-    return <OnboardingFlow />;
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-[#cde9ff] via-[#e3f4ff] to-[#b5e0ff] dark:from-[#0b132b] dark:to-[#020617] px-6">
+        <div className="max-w-sm w-full rounded-3xl bg-[#dff1ff]/88 dark:bg-slate-900/90 backdrop-blur-2xl border border-[#7dd3fc]/80 dark:border-slate-700 p-6 text-center space-y-4 shadow-xl">
+          <div className="w-10 h-10 mx-auto rounded-full border-3 border-[#0284c7] border-t-transparent animate-spin" />
+          <div className="space-y-1">
+            <h2 className="text-base font-bold text-slate-900 dark:text-white">
+              Opening PK CHAT...
+            </h2>
+            <p className="text-xs text-slate-600 dark:text-slate-300">
+              Syncing your profile with Firebase (<span className="font-mono">pkchat-41ef3</span>).
+            </p>
+          </div>
+          <button
+            type="button"
+            onClick={() =>
+              void startTrialWithLanguage({
+                languageCode: appLanguage || 'en',
+                languageName: appLanguageName || 'English',
+                fullName: firebaseUser?.displayName || undefined,
+              })
+            }
+            className="w-full min-h-[44px] px-4 py-2.5 rounded-xl bg-[#0284c7] hover:bg-[#0369a1] text-white text-xs font-bold transition-colors"
+          >
+            Enter PK CHAT Now
+          </button>
+        </div>
+      </div>
+    );
   }
 
   const renderMainScreen = () => {

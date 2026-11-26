@@ -352,10 +352,10 @@ export function mapFirebasePhoneAuthError(
         (fbErr?.message || '').toLowerCase().includes('sms unable to be sent')
       ) {
         message =
-          'SMS Region Policy in Firebase Console (pk-chhat) is blocking this country. Open Authentication → Settings → SMS region policy and enable Sri Lanka (+94) / your target countries.';
+          'SMS Region Policy in Firebase Console (pkchat-41ef3) is blocking this country. Open Authentication → Settings → SMS region policy and enable Sri Lanka (+94) / your target countries.';
       } else {
         message =
-          'Firebase Phone Authentication is currently OFF in Firebase Console (pk-chhat). Enable Authentication → Sign-in method → Phone → Save.';
+          'Firebase Phone Authentication is currently OFF in Firebase Console (pkchat-41ef3). Enable Authentication → Sign-in method → Phone → Save.';
       }
       break;
     case 'auth/unauthorized-domain':
@@ -363,7 +363,7 @@ export function mapFirebasePhoneAuthError(
       break;
     case 'auth/billing-not-enabled':
       message =
-        'Real carrier SMS requires Firebase Blaze billing on pk-chhat, or add your phone under "Phone numbers for testing" in Firebase Console.';
+        'Real carrier SMS requires Firebase Blaze billing on pkchat-41ef3, or add your phone under "Phone numbers for testing" in Firebase Console.';
       break;
     case 'auth/captcha-check-failed':
     case 'auth/missing-client-identifier':

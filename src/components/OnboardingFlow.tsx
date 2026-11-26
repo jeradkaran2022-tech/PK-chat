@@ -117,8 +117,12 @@ export function OnboardingFlow() {
   const [discoveryPhone, setDiscoveryPhone] = useState('');
   const [allowPhoneDiscovery, setAllowPhoneDiscovery] = useState(true);
   const [chosenLangCode, setChosenLangCode] = useState<string>(() => {
-    if (welcomeLangChoice === 'tanglish') return 'ta-LK';
-    return welcomeLangChoice || PK_APP_EXPERIENCE.defaultLanguage;
+    const candidate =
+      welcomeLangChoice === 'tanglish'
+        ? 'ta-LK'
+        : welcomeLangChoice || PK_APP_EXPERIENCE.defaultLanguage || 'en';
+    const isSupported = LANGUAGES.some((l) => l.code === candidate && l.supported);
+    return isSupported ? candidate : 'en';
   });
   const [langSearch, setLangSearch] = useState('');
   const [birthDate, setBirthDate] = useState<string>(() => {
@@ -456,11 +460,13 @@ export function OnboardingFlow() {
     setLocalSuccess(null);
     setAuthBusy(true);
     const { code, name } = resolveWelcomeLanguagePayload(welcomeLangChoice);
+    setActiveUserMode(userModeChoice, firebaseUser?.uid);
     try {
       await startTrialWithLanguage({
         languageCode: code,
         languageName: name,
         fullName: fullName.trim() || undefined,
+        userMode: userModeChoice,
       });
     } catch (err) {
       const msg = err instanceof Error ? err.message : 'Unable to start session.';
@@ -504,12 +510,11 @@ export function OnboardingFlow() {
   };
 
   const handleFinishProfileAndLanguage = async () => {
-    if (!chosenLangCode) {
-      setLocalError('Please select your preferred language independently.');
-      return;
-    }
-    const lang = LANGUAGES.find((l) => l.code === chosenLangCode);
-    if (!lang || !lang.supported) {
+    const resolvedLang =
+      LANGUAGES.find((l) => l.code === chosenLangCode && l.supported) ||
+      LANGUAGES.find((l) => l.code === 'en' && l.supported) ||
+      LANGUAGES.find((l) => l.supported);
+    if (!resolvedLang) {
       setLocalError(
         'Selected language is not supported for automatic translation. Choose a supported language to continue.'
       );
@@ -523,6 +528,7 @@ export function OnboardingFlow() {
       );
       return;
     }
+    setActiveUserMode(userModeChoice, firebaseUser?.uid);
     setAuthBusy(true);
     setLocalError(null);
     try {
@@ -530,14 +536,19 @@ export function OnboardingFlow() {
         fullName: fullName.trim() || 'PK CHAT Member',
         avatarUrl,
         country: selectedCountry,
-        preferredLanguageCode: lang.code,
-        preferredLanguageName: lang.name,
+        preferredLanguageCode: resolvedLang.code,
+        preferredLanguageName: resolvedLang.name,
         trusted: trustDevice,
         phoneNumber: discoveryPhone.trim() || pendingPhone || userAccount?.phoneNumber || undefined,
         allowPhoneDiscovery,
+        userMode: userModeChoice,
+        allowLocalFallback: true,
       });
     } catch (err) {
-      setLocalError(err instanceof Error ? err.message : 'Unable to save profile.');
+      const fbErr = err as { code?: string; message?: string };
+      const codePrefix = fbErr?.code ? `[${fbErr.code}] ` : '';
+      const msg = err instanceof Error ? err.message : 'Unable to save profile.';
+      setLocalError(msg.includes('[') ? msg : `${codePrefix}${msg}`);
     } finally {
       setAuthBusy(false);
     }
@@ -765,10 +776,28 @@ export function OnboardingFlow() {
                   {(localError || otpError) && (
                     <div
                       role="alert"
-                      className="p-3 rounded-xl bg-rose-50 border border-rose-300 text-xs font-medium text-rose-800 break-words space-y-1"
+                      className="p-3.5 rounded-xl bg-rose-50 border border-rose-300 text-xs font-medium text-rose-800 break-words space-y-2.5"
                     >
                       <p className="font-bold">Google Sign-In Error</p>
                       <p>{localError || otpError}</p>
+                      <div className="flex flex-wrap items-center gap-2 pt-1">
+                        <button
+                          type="button"
+                          disabled={authBusy || isLockedDown}
+                          onClick={handleGoogleSignIn}
+                          className="px-3 py-1.5 rounded-lg bg-rose-600 hover:bg-rose-700 text-white text-[11px] font-bold"
+                        >
+                          Retry Gmail Sign-In
+                        </button>
+                        <button
+                          type="button"
+                          disabled={authBusy || isLockedDown}
+                          onClick={handleInstantStartChat}
+                          className="px-3 py-1.5 rounded-lg bg-[#0284c7] hover:bg-[#0369a1] text-white text-[11px] font-bold"
+                        >
+                          Continue into PK Chat Now
+                        </button>
+                      </div>
                     </div>
                   )}
 
@@ -1771,10 +1800,69 @@ export function OnboardingFlow() {
           })}
         </div>
 
-        {localError && (
-          <div className="mt-4 p-3 rounded-xl bg-amber-50 dark:bg-amber-950/40 border border-amber-200 dark:border-amber-900 text-xs text-amber-800 dark:text-amber-200 flex items-center gap-2">
-            <AlertTriangle className="w-4 h-4 shrink-0" />
-            <span>{localError}</span>
+        {otpStatusMessage && !localError && !otpError && (
+          <div
+            role="status"
+            className="mt-4 p-3 rounded-xl bg-sky-50 border border-[#7dd3fc] text-xs font-medium text-[#0369a1]"
+          >
+            {otpStatusMessage}
+          </div>
+        )}
+
+        {(localError || otpError) && (
+          <div
+            role="alert"
+            className="mt-4 p-3.5 rounded-xl bg-amber-50 dark:bg-amber-950/40 border border-amber-300 dark:border-amber-800 text-xs text-amber-900 dark:text-amber-200 space-y-2 break-words"
+          >
+            <div className="flex items-start gap-2">
+              <AlertTriangle className="w-4 h-4 shrink-0 mt-0.5" />
+              <div>
+                <p className="font-bold">Sign-In / Entry Notice</p>
+                <p>{localError || otpError}</p>
+              </div>
+            </div>
+            <div className="flex flex-wrap items-center gap-2 pt-1">
+              {!firebaseUser && (
+                <button
+                  type="button"
+                  disabled={authBusy}
+                  onClick={handleGoogleSignIn}
+                  className="px-3 py-1.5 rounded-lg bg-white border border-amber-400 text-amber-900 text-[11px] font-bold hover:bg-amber-100"
+                >
+                  Sign in with Gmail (Cloud Sync)
+                </button>
+              )}
+              <button
+                type="button"
+                disabled={authBusy}
+                onClick={handleFinishProfileAndLanguage}
+                className="px-3 py-1.5 rounded-lg bg-[#0284c7] hover:bg-[#0369a1] text-white text-[11px] font-bold"
+              >
+                Continue into PK Chat
+              </button>
+            </div>
+          </div>
+        )}
+
+        {!firebaseUser && (
+          <div className="mt-4 p-3.5 rounded-2xl bg-sky-50/90 dark:bg-slate-950 border border-[#7dd3fc] dark:border-slate-800 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+            <div className="text-xs text-slate-700 dark:text-slate-300 space-y-0.5">
+              <p className="font-bold text-[#0c4a6e] dark:text-[#38bdf8] flex items-center gap-1.5">
+                <ShieldCheck className="w-4 h-4 text-[#0284c7] shrink-0" />
+                <span>Cloud Sync Optional · Ready to Start</span>
+              </p>
+              <p className="text-[11px] text-slate-600 dark:text-slate-400">
+                Sign in with Gmail for cloud sync on project <span className="font-mono">pkchat-41ef3</span>, or press <strong>Start PK CHAT</strong> below to enter immediately in your selected mode.
+              </p>
+            </div>
+            <button
+              type="button"
+              disabled={authBusy}
+              onClick={handleGoogleSignIn}
+              className="shrink-0 min-h-[40px] px-3.5 py-2 rounded-xl bg-white dark:bg-slate-900 border border-[#0284c7] text-[#0284c7] dark:text-[#38bdf8] hover:bg-sky-50 text-xs font-bold whitespace-nowrap"
+            >
+              {authBusy ? 'Connecting...' : 'Sign in with Gmail'}
+            </button>
           </div>
         )}
 
@@ -1784,7 +1872,9 @@ export function OnboardingFlow() {
               <Briefcase className="w-3.5 h-3.5 text-[#0284c7]" />
               <span>Select Your PK CHAT Mode</span>
             </span>
-            <span className="text-[11px] font-semibold text-[#0284c7]">Free to Setup</span>
+            <span className="text-[11px] font-semibold text-[#0284c7]">
+              Active: {userModeChoice === 'business' ? 'Business / Advertiser' : 'General Use'}
+            </span>
           </div>
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
             <button
@@ -1799,7 +1889,7 @@ export function OnboardingFlow() {
                   : 'bg-[#eef8ff]/60 border-[#7dd3fc]/60 hover:bg-[#e3f3ff]'
               }`}
             >
-              <p className="text-xs font-bold text-slate-900">General User Mode</p>
+              <p className="text-xs font-bold text-slate-900">General Use Mode</p>
               <p className="text-[11px] text-slate-600">
                 Chat, Calls, Live Classes · 90-day (3-month) free trial, then $10/yr (once every 12 months)
               </p>
@@ -1824,9 +1914,9 @@ export function OnboardingFlow() {
           </div>
         </div>
 
-        <div className="mt-6 flex items-center justify-between gap-4 pt-4 border-t border-slate-100 dark:border-slate-800">
+        <div className="mt-6 flex flex-wrap items-center justify-between gap-4 pt-4 border-t border-slate-100 dark:border-slate-800">
           <div className="text-xs text-slate-500 dark:text-slate-400 flex items-center gap-2">
-            <Lock className="w-3.5 h-3.5 text-[#0284c7] dark:text-[#38bdf8]" />
+            <Lock className="w-3.5 h-3.5 text-[#0284c7] dark:text-[#38bdf8] shrink-0" />
             <span>
               {isVipFounderFreeNumber(pendingPhone || userAccount?.phoneNumber || firebaseUser?.phoneNumber)
                 ? 'VIP Founder · Lifetime 100% Free Access (Subscription, Ads & Videos)'
@@ -1835,14 +1925,14 @@ export function OnboardingFlow() {
           </div>
           <button
             type="button"
-            disabled={authBusy || !chosenLangCode}
+            disabled={authBusy}
             onClick={() => {
               setActiveUserMode(userModeChoice, firebaseUser?.uid);
-              handleFinishProfileAndLanguage();
+              void handleFinishProfileAndLanguage();
             }}
-            className="px-6 py-3 rounded-xl bg-[#0284c7] hover:bg-[#0369a1] disabled:opacity-50 text-white text-sm font-semibold transition-colors whitespace-nowrap"
+            className="min-h-[46px] px-6 py-3 rounded-xl bg-[#0284c7] hover:bg-[#0369a1] disabled:opacity-50 text-white text-sm font-bold transition-colors whitespace-nowrap shadow-sm"
           >
-            {authBusy ? 'Creating Cloud Account...' : 'Start PK CHAT'}
+            {authBusy ? 'Entering PK CHAT...' : 'Start PK CHAT'}
           </button>
         </div>
       </div>

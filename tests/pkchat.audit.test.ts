@@ -3754,6 +3754,7 @@ async function main() {
     const fbSrc = fs.readFileSync(path.join(process.cwd(), 'src/lib/firebase.ts'), 'utf8');
     const ctxSrc = fs.readFileSync(path.join(process.cwd(), 'src/context/PkChatContext.tsx'), 'utf8');
     const onboardSrc = fs.readFileSync(path.join(process.cwd(), 'src/components/OnboardingFlow.tsx'), 'utf8');
+    assert.ok(fbSrc.includes('getApps().length > 0 ? getApp() : initializeApp(firebaseConfig)'));
     assert.ok(fbSrc.includes('GoogleAuthProvider'));
     assert.ok(fbSrc.includes('browserLocalPersistence'));
     assert.ok(fbSrc.includes('authPersistenceReady'));
@@ -3761,6 +3762,37 @@ async function main() {
     assert.ok(ctxSrc.includes('signInWithRedirect(auth, provider)'));
     assert.ok(ctxSrc.includes('getRedirectResult(auth)'));
     assert.ok(onboardSrc.includes('Google Sign-In Error'));
+
+    // Ensure zero stale pk-chhat project references remain in active web/server runtime files
+    const runtimeFilesToVerify = [
+      'src/lib/firebase.ts',
+      'src/lib/phoneAuth.ts',
+      'src/lib/statusMedia.ts',
+      'src/data/constants.ts',
+      'server.ts',
+    ];
+    for (const relPath of runtimeFilesToVerify) {
+      const content = fs.readFileSync(path.join(process.cwd(), relPath), 'utf8');
+      assert.equal(content.includes('pk-chhat'), false, `Stale pk-chhat reference found in ${relPath}`);
+    }
+
+    // Verify Firestore rules allow verified Google/Gmail users, safe non-existent gets (user_devices & chats), and VIP/trial subscription updates
+    const rulesSrc = fs.readFileSync(path.join(process.cwd(), 'firestore.rules'), 'utf8');
+    assert.ok(rulesSrc.includes("request.auth.token.email_verified == true"));
+    assert.ok(rulesSrc.includes("'google.com'"));
+    assert.ok(rulesSrc.includes('allow get: if isSignedIn() && isValidId(deviceId) && (resource == null || existing().userId == request.auth.uid || isAdmin());'));
+    assert.ok(rulesSrc.includes('allow get: if isSignedIn() && isValidId(chatId) && (resource == null || request.auth.uid in existing().participantIds || isAdmin());'));
+    assert.ok(rulesSrc.includes("'monthlyPriceUsd', 'autoRenew', 'trialStartAt', 'trialEndAt', 'currentPeriodEnd', 'updatedAt'"));
+
+    // Verify Start button & mode selection entry flow never traps users on "Authentication required."
+    const appSrc = fs.readFileSync(path.join(process.cwd(), 'src/App.tsx'), 'utf8');
+    assert.ok(onboardSrc.includes('General Use Mode'));
+    assert.ok(onboardSrc.includes('Business / Advertiser Mode'));
+    assert.ok(onboardSrc.includes('allowLocalFallback: true'));
+    assert.ok(onboardSrc.includes('Continue into PK Chat Now'));
+    assert.ok(onboardSrc.includes('Sign in with Gmail'));
+    assert.ok(ctxSrc.includes('if (params.allowLocalFallback !== false)'));
+    assert.ok(appSrc.includes('Enter PK CHAT Now'));
   });
 
   const passedCount = results.filter((r) => r.passed).length;

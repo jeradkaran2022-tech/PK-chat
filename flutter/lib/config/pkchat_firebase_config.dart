@@ -1,14 +1,14 @@
 /// PK CHAT shared Firebase identifiers matching `firebase-applet-config.json`.
 ///
-/// NOTE: After running `flutterfire configure --project=pk-chhat` locally,
+/// NOTE: After running `flutterfire configure --project=pkchat-41ef3` locally,
 /// pass `DefaultFirebaseOptions.currentPlatform` from generated `firebase_options.dart`
 /// into `Firebase.initializeApp(options: ...)`, and ALWAYS open Firestore using
 /// `firestoreDatabaseId` below rather than `(default)`.
 class PkChatFirebaseConfig {
-  static const String projectId = 'pk-chhat';
-  static const String messagingSenderId = '368881984581';
-  static const String storageBucket = 'pk-chhat.firebasestorage.app';
-  static const String authDomain = 'pk-chhat.firebaseapp.com';
+  static const String projectId = 'pkchat-41ef3';
+  static const String messagingSenderId = '970080253597';
+  static const String storageBucket = 'pkchat-41ef3.firebasestorage.app';
+  static const String authDomain = 'pkchat-41ef3.firebaseapp.com';
 
   /// CRITICAL: PK CHAT uses this dedicated Firestore Enterprise database ID.
   /// Using `FirebaseFirestore.instance` directly would point to `(default)` instead.

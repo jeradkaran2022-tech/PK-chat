@@ -261,26 +261,26 @@ function formatFirebaseStorageError(err: unknown, mediaLabel: 'Photo' | 'Video')
     return 'Authentication required. Please sign in again before uploading Status media.';
   }
   if (code === 'storage/unauthorized') {
-    return `${mediaLabel} upload blocked by Firebase Storage rules on project pk-chhat. Ensure your account email/phone/Google sign-in is verified and publish the updated storage.rules in Firebase Console → Storage → Rules.`;
+    return `${mediaLabel} upload blocked by Firebase Storage rules on project pkchat-41ef3. Ensure your account email/phone/Google sign-in is verified and publish the updated storage.rules in Firebase Console → Storage → Rules.`;
   }
   if (code === 'storage/bucket-not-found' || message.includes('404')) {
-    return 'Firebase Storage is not enabled on project pk-chhat yet. Open Firebase Console (pk-chhat) → Build → Storage → Get Started, then publish storage.rules.';
+    return 'Firebase Storage is not enabled on project pkchat-41ef3 yet. Open Firebase Console (pkchat-41ef3) → Build → Storage → Get Started, then publish storage.rules.';
   }
   if (code === 'storage/quota-exceeded') {
-    return 'Firebase Storage quota exceeded on project pk-chhat. Free up space or upgrade your Storage plan.';
+    return 'Firebase Storage quota exceeded on project pkchat-41ef3. Free up space or upgrade your Storage plan.';
   }
   if (code === 'storage/canceled') {
     return `${mediaLabel} upload was canceled.`;
   }
   if (code === 'storage/retry-limit-exceeded' || message === 'storage_stall_timeout' || message === 'storage_max_timeout') {
-    return `${mediaLabel} upload stalled or timed out. Check your internet connection and verify Firebase Storage is enabled on project pk-chhat with storage.rules deployed.`;
+    return `${mediaLabel} upload stalled or timed out. Check your internet connection and verify Firebase Storage is enabled on project pkchat-41ef3 with storage.rules deployed.`;
   }
   if (message.toLowerCase().includes('cors') || message.toLowerCase().includes('network')) {
-    return `${mediaLabel} upload network/CORS error. Ensure Firebase Storage is initialized on bucket pk-chhat.firebasestorage.app and publish storage.rules.`;
+    return `${mediaLabel} upload network/CORS error. Ensure Firebase Storage is initialized on bucket pkchat-41ef3.firebasestorage.app and publish storage.rules.`;
   }
   return message
     ? `${mediaLabel} upload error (${code || 'storage'}): ${message}`
-    : `${mediaLabel} upload requires Firebase Storage to be enabled on project pk-chhat with storage.rules deployed.`;
+    : `${mediaLabel} upload requires Firebase Storage to be enabled on project pkchat-41ef3 with storage.rules deployed.`;
 }
 
 export interface MediaUploadProgressDetail {

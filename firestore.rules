@@ -878,6 +878,7 @@ service cloud.firestore {
     // 2. user_profiles (Public-safe directory without PII; enforces block list and nobody visibility)
     match /user_profiles/{userId} {
       allow get: if isSignedIn() && isValidId(userId) && (
+        resource == null ||
         isOwner(userId) ||
         isAdmin() ||
         canViewUserProfile(existing())
@@ -909,7 +910,7 @@ service cloud.firestore {
 
     // 3. user_devices
     match /user_devices/{deviceId} {
-      allow get: if isSignedIn() && isValidId(deviceId) && (existing().userId == request.auth.uid || isAdmin());
+      allow get: if isSignedIn() && isValidId(deviceId) && (resource == null || existing().userId == request.auth.uid || isAdmin());
       allow list: if isSignedIn() && (resource.data.userId == request.auth.uid || isAdmin());
       allow create: if isVerifiedUser() && isValidId(deviceId)
         && isValidUserDevice(incoming())
@@ -971,7 +972,7 @@ service cloud.firestore {
 
     // 6. chats (Direct 1-to-1)
     match /chats/{chatId} {
-      allow get: if isSignedIn() && isValidId(chatId) && (request.auth.uid in existing().participantIds || isAdmin());
+      allow get: if isSignedIn() && isValidId(chatId) && (resource == null || request.auth.uid in existing().participantIds || isAdmin());
       allow list: if isSignedIn() && (request.auth.uid in resource.data.participantIds || isAdmin());
       allow create: if isVerifiedUser() && isValidId(chatId)
         && isValidDirectChat(incoming())
@@ -1190,7 +1191,7 @@ service cloud.firestore {
         && incoming().updatedAt == request.time
         && (
           isAdmin() ||
-          (isOwner(userId) && incoming().diff(existing()).affectedKeys().hasOnly(['plan', 'status', 'autoRenew', 'currentPeriodEnd', 'updatedAt']))
+          (isOwner(userId) && incoming().diff(existing()).affectedKeys().hasOnly(['plan', 'status', 'monthlyPriceUsd', 'autoRenew', 'trialStartAt', 'trialEndAt', 'currentPeriodEnd', 'updatedAt']))
         );
       allow delete: if isAdmin();
     }
@@ -1428,6 +1429,7 @@ service cloud.firestore {
     // 28. profile_media (Privacy-enforced personal profile images, bio, status & block list)
     match /profile_media/{userId} {
       allow get: if isSignedIn() && isValidId(userId) && (
+        resource == null ||
         isOwner(userId) ||
         isAdmin() ||
         (
@@ -1648,6 +1650,7 @@ service cloud.firestore {
     // 34. qr_tokens (Capability-based PK Chat QR tokens; owner & verified scanner lookup, zero PII)
     match /qr_tokens/{tokenId} {
       allow get: if isSignedIn() && isValidId(tokenId) && (
+        resource == null ||
         existing().userId == request.auth.uid ||
         isAdmin() ||
         (

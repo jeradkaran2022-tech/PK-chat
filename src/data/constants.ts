@@ -184,9 +184,9 @@ export interface IntegrationChecklistItem {
 export const INTEGRATION_CHECKLIST: IntegrationChecklistItem[] = [
   {
     area: 'Cloud Database & Rules',
-    component: 'Cloud Firestore (pk-chhat · zero-delete lockdown rules)',
+    component: 'Cloud Firestore (pkchat-41ef3 · zero-delete lockdown rules)',
     status: 'configured',
-    notes: 'Provisioned on project pk-chhat and deployed with server-controlled lockdown blocking and zero-delete data preservation.',
+    notes: 'Provisioned on project pkchat-41ef3 and deployed with server-controlled lockdown blocking and zero-delete data preservation.',
   },
   {
     area: 'Security Shield & Lockdown',

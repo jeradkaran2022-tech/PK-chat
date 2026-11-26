@@ -4,8 +4,8 @@ import 'package:flutter/foundation.dart'
 
 /// PK CHAT Firebase constants & platform options.
 ///
-/// NOTE: Web options match the live `pk-chhat` Firebase project configuration.
-/// Run `flutterfire configure --project=pk-chhat` inside `pk_chat/` locally
+/// NOTE: Web options match the live `pkchat-41ef3` Firebase project configuration.
+/// Run `flutterfire configure --project=pkchat-41ef3` inside `pk_chat/` locally
 /// to populate native `android` and `ios` FirebaseOptions (`google-services.json`
 /// and `GoogleService-Info.plist`).
 class DefaultFirebaseOptions {
@@ -27,7 +27,7 @@ class DefaultFirebaseOptions {
       case TargetPlatform.linux:
         throw UnsupportedError(
           'Native FirebaseOptions for $defaultTargetPlatform have not been generated yet. '
-          'Run `flutterfire configure --project=pk-chhat` inside pk_chat/.',
+          'Run `flutterfire configure --project=pkchat-41ef3` inside pk_chat/.',
         );
       default:
         throw UnsupportedError(
@@ -37,11 +37,11 @@ class DefaultFirebaseOptions {
   }
 
   static const FirebaseOptions web = FirebaseOptions(
-    apiKey: 'AIzaSyAkxdST7h1aLJL9osjRAEtCxc1LtzH-z5k',
-    appId: '1:368881984581:web:aa4bfa3115b5902cfeef2c',
-    messagingSenderId: '368881984581',
-    projectId: 'pk-chhat',
-    authDomain: 'pk-chhat.firebaseapp.com',
-    storageBucket: 'pk-chhat.firebasestorage.app',
+    apiKey: 'AIzaSyA9Wx4qC6NTxWC0tm2YElexthA4duoo8jo',
+    appId: '1:970080253597:web:f648306a6c3825f2bcc674',
+    messagingSenderId: '970080253597',
+    projectId: 'pkchat-41ef3',
+    authDomain: 'pkchat-41ef3.firebaseapp.com',
+    storageBucket: 'pkchat-41ef3.firebasestorage.app',
   );
 }

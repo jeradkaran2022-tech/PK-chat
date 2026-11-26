@@ -72,6 +72,7 @@ import {
   UserAccount,
   UserDevice,
   UserProfile,
+  PkChatUserMode,
   UserSettings,
   WallpaperItem,
 } from '../types/pkchat';
@@ -167,6 +168,7 @@ import {
 } from '../lib/phoneAuth';
 import {
   isVipFounderFreeNumber,
+  setActiveUserMode,
   STANDARD_FREE_TRIAL_DAYS,
 } from '../lib/subscriptionBilling';
 import { deleteProfilePhotosFromStorage, uploadProfilePhotoToStorage } from '../lib/profileStorage';
@@ -290,6 +292,7 @@ interface PkChatContextValue {
     languageCode: string;
     languageName: string;
     fullName?: string;
+    userMode?: PkChatUserMode;
   }) => Promise<void>;
   signInWithGoogle: () => Promise<void>;
   logoutUser: () => Promise<void>;
@@ -321,6 +324,8 @@ interface PkChatContextValue {
     trusted?: boolean;
     phoneNumber?: string;
     allowPhoneDiscovery?: boolean;
+    userMode?: PkChatUserMode;
+    allowLocalFallback?: boolean;
   }) => Promise<void>;
   updatePreferredLanguage: (code: string, name: string) => Promise<void>;
   updateLanguageSettings: (patch: Partial<LanguagePreference>) => Promise<void>;
@@ -2526,13 +2531,34 @@ export function PkChatProvider({ children }: { children: React.ReactNode }) {
       languageCode?: string;
       languageName?: string;
       fullName?: string;
+      avatarUrl?: string;
+      country?: CountryOption;
+      userMode?: PkChatUserMode;
     }) => {
       const uid = 'pkchat_preview_user';
-      const countryCfg = selectedCountryRef.current;
+      const countryCfg = params.country || selectedCountryRef.current;
       const cleanLangCode = (params.languageCode || appLanguage || 'en').trim().slice(0, 16) || 'en';
       const cleanLangName = (params.languageName || appLanguageName || 'English').trim().slice(0, 64) || 'English';
       const cleanName = (params.fullName || 'PK Chat Member').trim().slice(0, 100) || 'PK Chat Member';
       const cleanPhone = (params.phoneNumber || '').trim();
+      const cleanAvatar = (params.avatarUrl || '').slice(0, 200000);
+      const isVipPreview = isVipFounderFreeNumber(cleanPhone);
+
+      if (params.userMode) {
+        setActiveUserMode(params.userMode, uid);
+      }
+      setAppLanguageLocal(cleanLangCode);
+      setAppLanguageNameLocal(cleanLangName);
+      try {
+        localStorage.setItem('pk_chat_language', cleanLangName);
+        localStorage.setItem('pk_app_language_v1', cleanLangCode);
+        localStorage.setItem('pk_app_language_name_v1', cleanLangName);
+        if (!localStorage.getItem('pk_chat_trial_start')) {
+          localStorage.setItem('pk_chat_trial_start', Date.now().toString());
+        }
+      } catch {
+        // Safe fallback under restricted iframe storage
+      }
 
       setIsLocalPreviewSession(true);
       setUserAccount({
@@ -2548,7 +2574,7 @@ export function PkChatProvider({ children }: { children: React.ReactNode }) {
         uid,
         fullName: cleanName,
         about: 'Hey there! I am using PK Chat.',
-        avatarUrl: '',
+        avatarUrl: cleanAvatar,
         country: countryCfg.name,
         countryCode: countryCfg.code,
         preferredLanguage: cleanLangCode,
@@ -2587,14 +2613,25 @@ export function PkChatProvider({ children }: { children: React.ReactNode }) {
         appLanguage: cleanLangCode,
         appLanguageName: cleanLangName,
       }));
-      setSubscription({
-        userId: uid,
-        plan: 'trial',
-        status: 'trialing',
-        monthlyPriceUsd: 10,
-        autoRenew: true,
-        paymentMode: 'test',
-      });
+      setSubscription(
+        isVipPreview
+          ? {
+              userId: uid,
+              plan: 'free',
+              status: 'active',
+              monthlyPriceUsd: 0,
+              autoRenew: false,
+              paymentMode: 'test',
+            }
+          : {
+              userId: uid,
+              plan: 'trial',
+              status: 'trialing',
+              monthlyPriceUsd: 10,
+              autoRenew: true,
+              paymentMode: 'test',
+            }
+      );
       setDirectChats((prev) =>
         prev.length > 0
           ? prev
@@ -2760,12 +2797,20 @@ export function PkChatProvider({ children }: { children: React.ReactNode }) {
   );
 
   const startTrialWithLanguage = useCallback(
-    async (params: { languageCode: string; languageName: string; fullName?: string }) => {
+    async (params: {
+      languageCode: string;
+      languageName: string;
+      fullName?: string;
+      userMode?: PkChatUserMode;
+    }) => {
       setOtpError(null);
       const cleanCode = params.languageCode.trim().slice(0, 16) || 'en';
       const cleanName = params.languageName.trim().slice(0, 64) || 'English';
       const cleanFullName = (params.fullName || '').trim().slice(0, 100);
 
+      if (params.userMode) {
+        setActiveUserMode(params.userMode, auth.currentUser?.uid);
+      }
       setAppLanguageLocal(cleanCode);
       setAppLanguageNameLocal(cleanName);
       setPendingLang({ code: cleanCode, name: cleanName });
@@ -2783,8 +2828,38 @@ export function PkChatProvider({ children }: { children: React.ReactNode }) {
       }
 
       if (auth.currentUser) {
-        await updateAppLanguage(cleanCode, cleanName);
-        await provisionEmailVerifiedAccount(auth.currentUser);
+        await updateAppLanguage(cleanCode, cleanName).catch(() => {});
+        try {
+          await provisionEmailVerifiedAccount(auth.currentUser);
+        } catch {
+          // Ensure local profile state is ready so App router enters home cleanly
+          const uid = auth.currentUser.uid;
+          const countryCfg = selectedCountryRef.current;
+          setUserAccount((prev) =>
+            prev || {
+              uid,
+              email: auth.currentUser?.email || undefined,
+              country: countryCfg.name,
+              countryDialCode: countryCfg.dialCode,
+              phoneDiscoveryEnabled: false,
+              accountStatus: 'active',
+            }
+          );
+          setUserAccountLoaded(true);
+          setUserProfile((prev) =>
+            prev || {
+              uid,
+              fullName: cleanFullName || auth.currentUser?.displayName || 'PK Chat Member',
+              about: 'Hey there! I am using PK Chat.',
+              avatarUrl: auth.currentUser?.photoURL || '',
+              country: countryCfg.name,
+              countryCode: countryCfg.code,
+              preferredLanguage: cleanCode,
+              preferredLanguageName: cleanName,
+              onlineStatus: 'online',
+            }
+          );
+        }
         setActiveScreenState('home');
         return;
       }
@@ -2794,11 +2869,12 @@ export function PkChatProvider({ children }: { children: React.ReactNode }) {
         await provisionEmailVerifiedAccount(cred.user);
         setActiveScreenState('home');
       } catch {
-        // Fallback when Anonymous Auth is restricted on Firebase project
+        // Fallback when Anonymous Auth is disabled on pkchat-41ef3 or in preview/TWA
         enterLocalPreviewSession({
           languageCode: cleanCode,
           languageName: cleanName,
           fullName: cleanFullName,
+          userMode: params.userMode,
         });
       }
     },
@@ -2911,12 +2987,11 @@ export function PkChatProvider({ children }: { children: React.ReactNode }) {
       trusted?: boolean;
       phoneNumber?: string;
       allowPhoneDiscovery?: boolean;
+      userMode?: PkChatUserMode;
+      allowLocalFallback?: boolean;
     }) => {
       const user = auth.currentUser;
-      if (!user) throw new Error('Authentication required.');
-      const uid = user.uid;
-
-      const rawPhone = (user.phoneNumber || pendingPhone || params.phoneNumber || '').trim();
+      const rawPhone = (user?.phoneNumber || pendingPhone || params.phoneNumber || '').trim();
       const normalizedPhone = rawPhone ? normalizePhoneToE164(rawPhone, params.country.dialCode) : '';
       const validPhone =
         normalizedPhone.replace(/\D/g, '').length >= 8 && normalizedPhone.replace(/\D/g, '').length <= 15
@@ -2939,6 +3014,38 @@ export function PkChatProvider({ children }: { children: React.ReactNode }) {
           ? params.avatarUrl.slice(0, 200000)
           : '';
 
+      if (params.userMode) {
+        setActiveUserMode(params.userMode, user?.uid);
+      }
+      setAppLanguageLocal(params.preferredLanguageCode);
+      setAppLanguageNameLocal(params.preferredLanguageName);
+      try {
+        localStorage.setItem('pk_chat_language', params.preferredLanguageName);
+        localStorage.setItem('pk_app_language_v1', params.preferredLanguageCode);
+        localStorage.setItem('pk_app_language_name_v1', params.preferredLanguageName);
+      } catch {
+        // Safe fallback under restricted iframe storage
+      }
+
+      // If Firebase Auth session is not yet signed in (e.g., direct phone flow or blocked iframe/TWA popup),
+      // enter PK Chat cleanly via local preview session instead of trapping the user on "Authentication required."
+      if (!user) {
+        if (params.allowLocalFallback !== false) {
+          enterLocalPreviewSession({
+            fullName: cleanName,
+            avatarUrl: cleanAvatar,
+            country: params.country,
+            phoneNumber: validPhone || undefined,
+            languageCode: params.preferredLanguageCode,
+            languageName: params.preferredLanguageName,
+            userMode: params.userMode,
+          });
+          return;
+        }
+        throw new Error('Authentication required. Please sign in with Gmail or continue in preview mode.');
+      }
+      const uid = user.uid;
+
       if (cleanAvatar && cleanAvatar.startsWith('data:image/')) {
         try {
           const idToken = await user.getIdToken();
@@ -2948,14 +3055,18 @@ export function PkChatProvider({ children }: { children: React.ReactNode }) {
             kind: 'avatar',
           });
         } catch {
-          // Proceed with client-validated cropped JPEG if validation relay is unreachable
+          // Proceed with client-validated cropped JPEG if validation relay is unreachable (e.g. GitHub Pages)
         }
-        const uploaded = await uploadProfilePhotoToStorage({
-          uid,
-          kind: 'avatar',
-          dataUrl: cleanAvatar,
-        });
-        cleanAvatar = uploaded.url.slice(0, 200000);
+        try {
+          const uploaded = await uploadProfilePhotoToStorage({
+            uid,
+            kind: 'avatar',
+            dataUrl: cleanAvatar,
+          });
+          cleanAvatar = uploaded.url.slice(0, 200000);
+        } catch {
+          // Keep compressed inline JPEG data URL (<= 200KB) if Firebase Storage is not initialized yet
+        }
       }
 
       const [existingUserSnap, existingProfSnap, existingLangSnap, existingSettingsSnap, existingDeviceSnap, existingSubSnap] =
@@ -3153,22 +3264,38 @@ export function PkChatProvider({ children }: { children: React.ReactNode }) {
       }
 
       // Initialize 90-day (3-month) free trial (or VIP Founder lifetime 100% free bypass)
+      const candidatePhone = validPhone || auth.currentUser?.phoneNumber || '';
+      const isVipFounder = isVipFounderFreeNumber(candidatePhone);
+      const fallbackIso = new Date(
+        Date.now() + STANDARD_FREE_TRIAL_DAYS * 24 * 60 * 60 * 1000
+      ).toISOString();
+      let trialRes: {
+        vipFounderBypass?: boolean;
+        trialEndAt?: string;
+        currentPeriodEnd?: string;
+      } = {
+        vipFounderBypass: isVipFounder,
+        trialEndAt: fallbackIso,
+        currentPeriodEnd: isVipFounder ? '2099-12-31T23:59:59.000Z' : fallbackIso,
+      };
       try {
-        const candidatePhone = validPhone || auth.currentUser?.phoneNumber || '';
-        const isVipFounder = isVipFounderFreeNumber(candidatePhone);
-        const trialRes = await validateSubscriptionAction({
+        // Server validation when Express backend is reachable; gracefully falls back on static GitHub Pages / TWA
+        trialRes = await validateSubscriptionAction({
           action: isVipFounder ? 'verify_vip_founder' : 'start_trial',
           provider: 'google_play_test',
           phoneNumber: candidatePhone || undefined,
         });
-        const fallbackIso = new Date(
-          Date.now() + STANDARD_FREE_TRIAL_DAYS * 24 * 60 * 60 * 1000
-        ).toISOString();
-        const trialEndDate = new Date(trialRes.trialEndAt || fallbackIso);
-        const periodEndDate = new Date(
-          trialRes.currentPeriodEnd ||
-            (isVipFounder || trialRes.vipFounderBypass ? '2099-12-31T23:59:59.000Z' : trialRes.trialEndAt || fallbackIso)
-        );
+      } catch {
+        // Static GitHub Pages / offline PWA uses deterministic VIP/90-day trial schedule above
+      }
+
+      const trialEndDate = new Date(trialRes.trialEndAt || fallbackIso);
+      const periodEndDate = new Date(
+        trialRes.currentPeriodEnd ||
+          (isVipFounder || trialRes.vipFounderBypass ? '2099-12-31T23:59:59.000Z' : trialRes.trialEndAt || fallbackIso)
+      );
+
+      try {
         if (isVipFounder || trialRes.vipFounderBypass) {
           await setDoc(
             doc(db, 'subscriptions', uid),
@@ -3204,27 +3331,70 @@ export function PkChatProvider({ children }: { children: React.ReactNode }) {
           });
         }
       } catch (err) {
-        handleFirestoreError(err, OperationType.WRITE, `subscriptions/${uid}`);
+        if (!isTransientFirestoreError(err)) {
+          handleFirestoreError(err, OperationType.WRITE, `subscriptions/${uid}`);
+        }
       }
 
-      if (validPhone) {
-        setUserAccount((prev) => ({
-          uid,
-          ...(prev || {}),
-          phoneNumber: validPhone,
-          country: params.country.name,
-          countryDialCode: params.country.dialCode,
-          phoneDiscoveryEnabled: allowDiscovery,
-          accountStatus: 'active',
-        }));
-        setUserAccountLoaded(true);
-      }
+      // Immediately hydrate local session state so App router enters 'home' cleanly without waiting on snapshots
+      setUserAccount((prev) => ({
+        uid,
+        ...(prev || {}),
+        ...(validPhone ? { phoneNumber: validPhone } : {}),
+        ...(user.email ? { email: user.email, recoveryEmail: user.email } : {}),
+        country: params.country.name,
+        countryDialCode: params.country.dialCode,
+        phoneDiscoveryEnabled: allowDiscovery,
+        accountStatus: 'active',
+      }));
+      setUserAccountLoaded(true);
+      setUserProfile({
+        uid,
+        fullName: cleanName,
+        about: existingProfSnap.data()?.about || 'Hey there! I am using PK Chat.',
+        avatarUrl: resolvedOnboardingAvatar,
+        country: params.country.name,
+        countryCode: params.country.code,
+        preferredLanguage: params.preferredLanguageCode,
+        preferredLanguageName: params.preferredLanguageName,
+        e2eePublicKey: e2eePubKey,
+        onlineStatus: isIntentionalDataOff() ? 'offline' : 'online',
+      });
+      setLanguagePref({
+        userId: uid,
+        primaryLanguage: params.preferredLanguageCode,
+        primaryLanguageName: params.preferredLanguageName,
+        autoDetect: true,
+        preserveOriginal: true,
+        defaultViewMode: 'translated',
+        voiceTranslationEnabled: true,
+        ttsVoice: 'Kore',
+      });
+      setSubscription(
+        isVipFounder || trialRes.vipFounderBypass
+          ? {
+              userId: uid,
+              plan: 'free',
+              status: 'active',
+              monthlyPriceUsd: 0,
+              autoRenew: false,
+              paymentMode: 'test',
+            }
+          : {
+              userId: uid,
+              plan: 'trial',
+              status: 'trialing',
+              monthlyPriceUsd: 10,
+              autoRenew: true,
+              paymentMode: 'test',
+            }
+      );
 
       await logSecurityEvent(
         'ACCOUNT_ONBOARDED',
         'info',
         `Trusted device ${currentDeviceId} registered with E2EE P-256 keypair.`
-      );
+      ).catch(() => {});
       try {
         localStorage.setItem(`pk_seq_onboarding_done_${uid}`, '1');
       } catch {
@@ -3232,7 +3402,7 @@ export function PkChatProvider({ children }: { children: React.ReactNode }) {
       }
       setActiveScreenState('home');
     },
-    [claimUniquePhoneTransaction, currentDeviceId, e2eePubKey, logSecurityEvent, pendingPhone]
+    [claimUniquePhoneTransaction, currentDeviceId, e2eePubKey, enterLocalPreviewSession, logSecurityEvent, pendingPhone]
   );
 
   const updatePreferredLanguage = useCallback(
@@ -5199,12 +5369,64 @@ export function PkChatProvider({ children }: { children: React.ReactNode }) {
       const uid = auth.currentUser?.uid;
       if (!uid) return;
       const phoneCandidate = userAccount?.phoneNumber || auth.currentUser?.phoneNumber || '';
-      const result = await validateSubscriptionAction({
-        action,
+      const isVipLocal = isVipFounderFreeNumber(phoneCandidate);
+      const fallbackTrialEnd = new Date(
+        Date.now() + STANDARD_FREE_TRIAL_DAYS * 24 * 60 * 60 * 1000
+      ).toISOString();
+      const fallbackAnnualEnd = new Date(
+        Date.now() + 365 * 24 * 60 * 60 * 1000
+      ).toISOString();
+      let result: {
+        vipFounderBypass?: boolean;
+        plan?: string;
+        status: string;
+        monthlyPriceUsd?: number;
+        autoRenew: boolean;
+        provider?: string;
+        trialStartAt?: string;
+        trialEndAt?: string;
+        currentPeriodEnd?: string;
+        amountChargedUsd?: number;
+        description: string;
+      } = {
+        vipFounderBypass: isVipLocal,
+        plan: isVipLocal ? 'free' : action === 'start_trial' ? 'trial' : 'pro_monthly',
+        status: isVipLocal
+          ? 'active'
+          : action === 'cancel'
+            ? 'cancelled'
+            : action === 'start_trial'
+              ? 'trialing'
+              : 'active',
+        monthlyPriceUsd: isVipLocal ? 0 : 10,
+        autoRenew: isVipLocal ? false : action !== 'cancel',
         provider,
-        phoneNumber: phoneCandidate || undefined,
-      });
-      const vipBypass = Boolean(result.vipFounderBypass || isVipFounderFreeNumber(phoneCandidate));
+        trialStartAt: action === 'start_trial' ? new Date().toISOString() : undefined,
+        trialEndAt: action === 'start_trial' ? fallbackTrialEnd : undefined,
+        currentPeriodEnd: isVipLocal
+          ? '2099-12-31T23:59:59.000Z'
+          : action === 'start_trial'
+            ? fallbackTrialEnd
+            : fallbackAnnualEnd,
+        amountChargedUsd: isVipLocal || action === 'start_trial' || action === 'cancel' ? 0 : 10,
+        description: isVipLocal
+          ? 'VIP Founder Lifetime 100% Free Access ($0)'
+          : action === 'start_trial'
+            ? 'PK CHAT 90-Day (3-Month) Free Trial'
+            : action === 'cancel'
+              ? 'Subscription renewal cancelled'
+              : 'PK CHAT Annual Pro ($10/year)',
+      };
+      try {
+        result = await validateSubscriptionAction({
+          action,
+          provider,
+          phoneNumber: phoneCandidate || undefined,
+        });
+      } catch {
+        // Static GitHub Pages / offline fallback uses deterministic schedule above
+      }
+      const vipBypass = Boolean(result.vipFounderBypass || isVipLocal);
       const subPatch: Record<string, unknown> = {
         userId: uid,
         plan: vipBypass ? 'free' : result.plan || subscription?.plan || 'pro_monthly',

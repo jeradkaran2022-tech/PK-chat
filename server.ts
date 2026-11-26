@@ -3731,7 +3731,7 @@ async function startServer() {
     );
 
     const payload = {
-      projectId: fbCfg.projectId || 'pk-chhat',
+      projectId: fbCfg.projectId || 'pkchat-41ef3',
       probedDialCode: rawCountry,
       firebasePhoneEnabled,
       firebaseBillingRequired,
