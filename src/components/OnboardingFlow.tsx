@@ -52,6 +52,7 @@ export function OnboardingFlow() {
     signInWithGoogle,
     otpStatusMessage,
     otpError,
+    otpErrorCode,
     firebaseUser,
     userAccount,
     userAccountLoaded,
@@ -1800,71 +1801,80 @@ export function OnboardingFlow() {
           })}
         </div>
 
-        {otpStatusMessage && !localError && !otpError && (
-          <div
-            role="status"
-            className="mt-4 p-3 rounded-xl bg-sky-50 border border-[#7dd3fc] text-xs font-medium text-[#0369a1]"
-          >
-            {otpStatusMessage}
-          </div>
-        )}
-
-        {(localError || otpError) && (
-          <div
-            role="alert"
-            className="mt-4 p-3.5 rounded-xl bg-amber-50 dark:bg-amber-950/40 border border-amber-300 dark:border-amber-800 text-xs text-amber-900 dark:text-amber-200 space-y-2 break-words"
-          >
-            <div className="flex items-start gap-2">
-              <AlertTriangle className="w-4 h-4 shrink-0 mt-0.5" />
-              <div>
-                <p className="font-bold">Sign-In / Entry Notice</p>
-                <p>{localError || otpError}</p>
-              </div>
+        {/* Inline message panel for unauthenticated/blocked TWA & preview users */}
+        <div id="inline-msg-panel" className="mt-4 space-y-3" aria-live="polite">
+          {otpStatusMessage && !localError && !otpError && (
+            <div
+              role="status"
+              className="p-3 rounded-xl bg-sky-50 border border-[#7dd3fc] text-xs font-medium text-[#0369a1]"
+            >
+              {otpStatusMessage}
             </div>
-            <div className="flex flex-wrap items-center gap-2 pt-1">
-              {!firebaseUser && (
-                <button
-                  type="button"
-                  disabled={authBusy}
-                  onClick={handleGoogleSignIn}
-                  className="px-3 py-1.5 rounded-lg bg-white border border-amber-400 text-amber-900 text-[11px] font-bold hover:bg-amber-100"
-                >
-                  Sign in with Gmail (Cloud Sync)
-                </button>
-              )}
+          )}
+
+          {(localError || otpError) && (() => {
+            const rawErrorText = localError || otpError || '';
+            const extractedCodeMatch = rawErrorText.match(/^\[([^\]]+)\]\s*(.*)$/);
+            const displayCode = extractedCodeMatch?.[1] || otpErrorCode || 'Error';
+            const displayMessage = extractedCodeMatch?.[2] || rawErrorText;
+            return (
+              <div
+                role="alert"
+                className="p-3.5 rounded-xl bg-red-50 dark:bg-red-950/40 border border-red-400 dark:border-red-800 text-xs text-red-800 dark:text-red-200 space-y-2 break-words"
+              >
+                <div className="flex items-start gap-2">
+                  <AlertTriangle className="w-4 h-4 shrink-0 mt-0.5 text-red-600 dark:text-red-400" />
+                  <p>
+                    <strong>[{displayCode}]</strong>: {displayMessage}
+                  </p>
+                </div>
+                <div className="flex flex-wrap items-center gap-2 pt-1">
+                  {!firebaseUser && (
+                    <button
+                      type="button"
+                      disabled={authBusy}
+                      onClick={handleGoogleSignIn}
+                      className="px-3 py-1.5 rounded-lg bg-[#0284c7] hover:bg-[#0369a1] text-white text-[11px] font-bold"
+                    >
+                      Continue with Sign-In
+                    </button>
+                  )}
+                  <button
+                    type="button"
+                    disabled={authBusy}
+                    onClick={handleFinishProfileAndLanguage}
+                    className="px-3 py-1.5 rounded-lg bg-white border border-red-300 text-red-800 text-[11px] font-bold hover:bg-red-100"
+                  >
+                    Continue into PK Chat
+                  </button>
+                </div>
+              </div>
+            );
+          })()}
+
+          {!firebaseUser && (
+            <div className="inline-auth-banner p-3.5 rounded-2xl bg-amber-50 dark:bg-amber-950/30 border border-amber-300 dark:border-amber-700 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+              <div className="text-xs text-amber-950 dark:text-amber-100 space-y-0.5">
+                <p className="font-bold flex items-center gap-1.5">
+                  <ShieldCheck className="w-4 h-4 text-[#0284c7] shrink-0" />
+                  <span>Authentication recommended for cloud sync</span>
+                </p>
+                <p className="text-[11px] text-amber-900/90 dark:text-amber-200/90">
+                  Sign in with Gmail for cloud sync on project <span className="font-mono">pkchat-41ef3</span>, or press <strong>Start PK CHAT</strong> below to enter immediately in your selected mode.
+                </p>
+              </div>
               <button
+                id="inline-auth-btn"
                 type="button"
                 disabled={authBusy}
-                onClick={handleFinishProfileAndLanguage}
-                className="px-3 py-1.5 rounded-lg bg-[#0284c7] hover:bg-[#0369a1] text-white text-[11px] font-bold"
+                onClick={handleGoogleSignIn}
+                className="shrink-0 min-h-[40px] px-3.5 py-2 rounded-xl bg-[#0284c7] hover:bg-[#0369a1] text-white text-xs font-bold whitespace-nowrap transition-colors"
               >
-                Continue into PK Chat
+                {authBusy ? 'Connecting...' : 'Continue with Sign-In'}
               </button>
             </div>
-          </div>
-        )}
-
-        {!firebaseUser && (
-          <div className="mt-4 p-3.5 rounded-2xl bg-sky-50/90 dark:bg-slate-950 border border-[#7dd3fc] dark:border-slate-800 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-            <div className="text-xs text-slate-700 dark:text-slate-300 space-y-0.5">
-              <p className="font-bold text-[#0c4a6e] dark:text-[#38bdf8] flex items-center gap-1.5">
-                <ShieldCheck className="w-4 h-4 text-[#0284c7] shrink-0" />
-                <span>Cloud Sync Optional · Ready to Start</span>
-              </p>
-              <p className="text-[11px] text-slate-600 dark:text-slate-400">
-                Sign in with Gmail for cloud sync on project <span className="font-mono">pkchat-41ef3</span>, or press <strong>Start PK CHAT</strong> below to enter immediately in your selected mode.
-              </p>
-            </div>
-            <button
-              type="button"
-              disabled={authBusy}
-              onClick={handleGoogleSignIn}
-              className="shrink-0 min-h-[40px] px-3.5 py-2 rounded-xl bg-white dark:bg-slate-900 border border-[#0284c7] text-[#0284c7] dark:text-[#38bdf8] hover:bg-sky-50 text-xs font-bold whitespace-nowrap"
-            >
-              {authBusy ? 'Connecting...' : 'Sign in with Gmail'}
-            </button>
-          </div>
-        )}
+          )}
+        </div>
 
         <div className="mt-4 p-3.5 rounded-2xl bg-[#dff1ff]/80 border border-[#7dd3fc]/70 space-y-2">
           <div className="flex items-center justify-between gap-2">
@@ -1879,11 +1889,14 @@ export function OnboardingFlow() {
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
             <button
               type="button"
+              data-mode="general"
+              aria-pressed={userModeChoice === 'general'}
               onClick={() => {
                 setUserModeChoice('general');
                 setActiveUserMode('general', firebaseUser?.uid);
+                setLocalError(null);
               }}
-              className={`p-2.5 rounded-xl border text-left transition-all ${
+              className={`mode-btn p-2.5 rounded-xl border text-left transition-all ${
                 userModeChoice === 'general'
                   ? 'bg-[#e8f5ff] border-[#0284c7] ring-2 ring-[#0284c7]/30'
                   : 'bg-[#eef8ff]/60 border-[#7dd3fc]/60 hover:bg-[#e3f3ff]'
@@ -1896,11 +1909,14 @@ export function OnboardingFlow() {
             </button>
             <button
               type="button"
+              data-mode="business"
+              aria-pressed={userModeChoice === 'business'}
               onClick={() => {
                 setUserModeChoice('business');
                 setActiveUserMode('business', firebaseUser?.uid);
+                setLocalError(null);
               }}
-              className={`p-2.5 rounded-xl border text-left transition-all ${
+              className={`mode-btn p-2.5 rounded-xl border text-left transition-all ${
                 userModeChoice === 'business'
                   ? 'bg-[#e8f5ff] border-[#0284c7] ring-2 ring-[#0284c7]/30'
                   : 'bg-[#eef8ff]/60 border-[#7dd3fc]/60 hover:bg-[#e3f3ff]'
@@ -1924,6 +1940,7 @@ export function OnboardingFlow() {
             </span>
           </div>
           <button
+            id="startButton"
             type="button"
             disabled={authBusy}
             onClick={() => {
