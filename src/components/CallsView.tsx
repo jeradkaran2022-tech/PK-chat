@@ -21,6 +21,7 @@ import {
   PhoneOff,
   Play,
   RotateCw,
+  Search,
   ShieldCheck,
   Sparkles,
   Square,
@@ -33,8 +34,8 @@ import {
   VolumeX,
   Wifi,
 } from 'lucide-react';
+import { BRAND_LOGO_URL } from '../data/constants';
 import { WORLD_LANGUAGES_CATALOG, findWorldLanguage } from '../data/worldLanguages';
-import { BUILT_IN_WALLPAPERS, PK_WORLD_PEACE_WALLPAPER_URL } from '../data/constants';
 import { usePkChat } from '../context/PkChatContext';
 import { useAppI18n } from '../lib/i18n';
 import { synthesizeTranslatedSpeech } from '../lib/api';
@@ -117,13 +118,6 @@ export function CallsView() {
   const [switchingCamera, setSwitchingCamera] = useState(false);
   const [dialNumber, setDialNumber] = useState('');
   const [showDialPad, setShowDialPad] = useState(!isVideo);
-  const activeDialPadWallpaperUrl = useMemo(() => {
-    const id = userSettings?.wallpaperId || 'wp_world_peace';
-    const matched =
-      wallpapers.find((w) => w.wallpaperId === id) ||
-      BUILT_IN_WALLPAPERS.find((w) => w.wallpaperId === id);
-    return matched?.imageUrl || PK_WORLD_PEACE_WALLPAPER_URL;
-  }, [userSettings?.wallpaperId, wallpapers]);
 
   useEffect(() => {
     if (callState !== 'idle') return;
@@ -168,6 +162,7 @@ export function CallsView() {
       return [];
     }
   });
+  const [dialSearchQuery, setDialSearchQuery] = useState('');
   const [audioMode, setAudioMode] = useState<'translated' | 'original'>('translated');
   const [noiseReduction, setNoiseReduction] = useState(true);
   const [lowBandwidth, setLowBandwidth] = useState(false);
@@ -1994,105 +1989,10 @@ export function CallsView() {
             </div>
           )}
 
-          {/* Bottom Bar: Compact WhatsApp-Style Call Controls (Speaker, Mute, Video, Beauty, Share Screen, Translate, Flip Camera, Record, End Call) */}
-          <div className="relative z-10 w-full max-w-2xl pb-2">
-            <div className="px-3 sm:px-4 py-3 rounded-3xl bg-[#0b2545]/80 backdrop-blur-2xl border border-[#7dd3fc]/35 flex flex-wrap items-center justify-center sm:justify-around gap-2 shadow-[0_10px_32px_rgba(2,132,199,0.35)]">
-              <button
-                type="button"
-                onClick={() => {
-                  const next = !speakerOn;
-                  setSpeakerOn(next);
-                  setRingbackSpeakerMode(next);
-                }}
-                aria-label={speakerOn ? 'Switch to earpiece' : 'Turn on speakerphone'}
-                className="flex flex-col items-center gap-1 text-[10px] font-medium text-white/90"
-              >
-                <span
-                  className={`w-11 h-11 rounded-full flex items-center justify-center transition-colors ${
-                    speakerOn ? 'bg-[#38bdf8] text-slate-950' : 'bg-white/15 hover:bg-white/25 text-white'
-                  }`}
-                >
-                  {speakerOn ? <Volume2 className="w-4 h-4" /> : <VolumeX className="w-4 h-4" />}
-                </span>
-                <span>{speakerOn ? 'Speaker' : 'Earpiece'}</span>
-              </button>
-
-              <button
-                type="button"
-                onClick={() => {
-                  const next = !micMuted;
-                  setMicMuted(next);
-                  streamRef.current?.getAudioTracks().forEach((t) => (t.enabled = !next));
-                }}
-                aria-label={micMuted ? 'Unmute microphone' : 'Mute microphone'}
-                className="flex flex-col items-center gap-1 text-[10px] font-medium text-white/90"
-              >
-                <span
-                  className={`w-11 h-11 rounded-full flex items-center justify-center transition-colors ${
-                    micMuted ? 'bg-[#bae6fd] text-slate-900' : 'bg-white/15 hover:bg-white/25 text-white'
-                  }`}
-                >
-                  {micMuted ? <MicOff className="w-4 h-4" /> : <Mic className="w-4 h-4" />}
-                </span>
-                <span>{micMuted ? 'Unmute' : 'Mute'}</span>
-              </button>
-
-              {isVideo && (
-                <>
-                  <button
-                    type="button"
-                    onClick={() => void handleToggleVideoCamera()}
-                    aria-label={cameraOff ? 'Turn camera on' : 'Turn camera off'}
-                    className="flex flex-col items-center gap-1 text-[10px] font-medium text-white/90"
-                  >
-                    <span
-                      className={`w-11 h-11 rounded-full flex items-center justify-center transition-colors ${
-                        cameraOff ? 'bg-rose-600 text-white' : 'bg-white/15 hover:bg-white/25 text-white'
-                      }`}
-                    >
-                      {cameraOff ? <VideoOff className="w-4 h-4" /> : <Video className="w-4 h-4" />}
-                    </span>
-                    <span>{cameraOff ? 'Cam Off' : 'Video'}</span>
-                  </button>
-
-                  <button
-                    type="button"
-                    onClick={() => setBeautyFilterEnabled((b) => !b)}
-                    aria-label="Toggle beauty filter"
-                    className="flex flex-col items-center gap-1 text-[10px] font-medium text-white/90"
-                  >
-                    <span
-                      className={`w-11 h-11 rounded-full flex items-center justify-center transition-colors ${
-                        beautyFilterEnabled
-                          ? 'bg-[#38bdf8] text-slate-950'
-                          : 'bg-white/15 hover:bg-white/25 text-white'
-                      }`}
-                    >
-                      <Sparkles className="w-4 h-4" />
-                    </span>
-                    <span>Beauty</span>
-                  </button>
-
-                  <button
-                    type="button"
-                    onClick={handleToggleCallScreenShare}
-                    aria-label={isScreenSharing ? 'Stop Sharing screen' : 'Share Screen'}
-                    className="flex flex-col items-center gap-1 text-[10px] font-medium text-white/90"
-                  >
-                    <span
-                      className={`w-11 h-11 rounded-full flex items-center justify-center transition-colors ${
-                        isScreenSharing
-                          ? 'bg-[#38bdf8] text-slate-950 ring-2 ring-white'
-                          : 'bg-white/15 hover:bg-white/25 text-white'
-                      }`}
-                    >
-                      <Monitor className="w-4 h-4" />
-                    </span>
-                    <span>{isScreenSharing ? 'Stop Share' : 'Share Screen'}</span>
-                  </button>
-                </>
-              )}
-
+          {/* Bottom Bar: Exact WhatsApp-Style Audio/Video Call Controls */}
+          <div className="relative z-10 w-full max-w-md pb-2 space-y-2.5">
+            {/* Compact Frosted Extras Strip (Translate, Beauty, Share Screen, Record) */}
+            <div className="flex flex-wrap items-center justify-center gap-2">
               <button
                 type="button"
                 onClick={() => {
@@ -2106,33 +2006,46 @@ export function CallsView() {
                   }
                 }}
                 aria-label="Toggle live call translation captions"
-                className="flex flex-col items-center gap-1 text-[10px] font-medium text-white/90"
+                className={`px-3 py-1.5 rounded-full text-[11px] font-semibold inline-flex items-center gap-1.5 backdrop-blur-md border transition-colors ${
+                  voiceLocationMode === 'external' && showCaptionsInOverlay
+                    ? 'bg-[#38bdf8] text-slate-950 border-white/60'
+                    : 'bg-white/12 hover:bg-white/22 text-white border-white/20'
+                }`}
               >
-                <span
-                  className={`w-11 h-11 rounded-full flex items-center justify-center transition-colors ${
-                    voiceLocationMode === 'external' && showCaptionsInOverlay
-                      ? 'bg-[#38bdf8] text-slate-950'
-                      : 'bg-white/15 hover:bg-white/25 text-white'
-                  }`}
-                >
-                  <Captions className="w-4 h-4" />
-                </span>
+                <Captions className="w-3.5 h-3.5" />
                 <span>Translate</span>
               </button>
 
               {isVideo && (
-                <button
-                  type="button"
-                  onClick={handleToggleCameraFacing}
-                  disabled={switchingCamera || cameraOff || isScreenSharing}
-                  aria-label="Flip Camera"
-                  className="flex flex-col items-center gap-1 text-[10px] font-medium text-white/90 disabled:opacity-50"
-                >
-                  <span className="w-11 h-11 rounded-full bg-white/15 hover:bg-white/25 flex items-center justify-center transition-colors">
-                    <RotateCw className={`w-4 h-4 ${switchingCamera ? 'animate-spin' : ''}`} />
-                  </span>
-                  <span>Flip</span>
-                </button>
+                <>
+                  <button
+                    type="button"
+                    onClick={() => setBeautyFilterEnabled((b) => !b)}
+                    aria-label="Toggle beauty filter"
+                    className={`px-3 py-1.5 rounded-full text-[11px] font-semibold inline-flex items-center gap-1.5 backdrop-blur-md border transition-colors ${
+                      beautyFilterEnabled
+                        ? 'bg-[#38bdf8] text-slate-950 border-white/60'
+                        : 'bg-white/12 hover:bg-white/22 text-white border-white/20'
+                    }`}
+                  >
+                    <Sparkles className="w-3.5 h-3.5" />
+                    <span>Beauty</span>
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={handleToggleCallScreenShare}
+                    aria-label={isScreenSharing ? 'Stop Sharing screen' : 'Share Screen'}
+                    className={`px-3 py-1.5 rounded-full text-[11px] font-semibold inline-flex items-center gap-1.5 backdrop-blur-md border transition-colors ${
+                      isScreenSharing
+                        ? 'bg-[#38bdf8] text-slate-950 border-white'
+                        : 'bg-white/12 hover:bg-white/22 text-white border-white/20'
+                    }`}
+                  >
+                    <Monitor className="w-3.5 h-3.5" />
+                    <span>{isScreenSharing ? 'Stop Share' : 'Share Screen'}</span>
+                  </button>
+                </>
               )}
 
               {!isRecording ? (
@@ -2140,11 +2053,9 @@ export function CallsView() {
                   type="button"
                   onClick={handleRecordTrigger}
                   aria-label="Record call"
-                  className="flex flex-col items-center gap-1 text-[10px] font-medium text-white/90"
+                  className="px-3 py-1.5 rounded-full bg-white/12 hover:bg-white/22 text-white border border-white/20 text-[11px] font-semibold inline-flex items-center gap-1.5 backdrop-blur-md"
                 >
-                  <span className="w-11 h-11 rounded-full bg-white/15 hover:bg-white/25 flex items-center justify-center transition-colors">
-                    <Disc className="w-4 h-4 text-rose-300" />
-                  </span>
+                  <Disc className="w-3.5 h-3.5 text-rose-300" />
                   <span>Record</span>
                 </button>
               ) : (
@@ -2152,22 +2063,108 @@ export function CallsView() {
                   type="button"
                   onClick={stopCallRecording}
                   aria-label="Stop recording"
-                  className="flex flex-col items-center gap-1 text-[10px] font-medium text-rose-300"
+                  className="px-3 py-1.5 rounded-full bg-rose-600 hover:bg-rose-700 text-white text-[11px] font-bold inline-flex items-center gap-1.5"
                 >
-                  <span className="w-11 h-11 rounded-full bg-rose-600 hover:bg-rose-700 text-white flex items-center justify-center transition-colors">
-                    <Square className="w-4 h-4" />
+                  <Square className="w-3 h-3" />
+                  <span>Stop {recordingSec}s</span>
+                </button>
+              )}
+            </div>
+
+            {/* Primary WhatsApp Bottom Control Dock: Speaker · Video · Flip (Video) · Mute · End Call */}
+            <div className="px-4 py-3.5 rounded-[28px] bg-[#0b2545]/82 backdrop-blur-2xl border border-[#7dd3fc]/35 flex items-center justify-around gap-2 shadow-[0_12px_36px_rgba(2,132,199,0.4)]">
+              <button
+                type="button"
+                onClick={() => {
+                  const next = !speakerOn;
+                  setSpeakerOn(next);
+                  setRingbackSpeakerMode(next);
+                }}
+                aria-label={speakerOn ? 'Switch to earpiece' : 'Turn on speakerphone'}
+                className="flex flex-col items-center gap-1 text-[10px] font-medium text-white/90"
+              >
+                <span
+                  className={`w-12 h-12 rounded-full flex items-center justify-center transition-colors ${
+                    speakerOn ? 'bg-white text-slate-950' : 'bg-white/15 hover:bg-white/25 text-white'
+                  }`}
+                >
+                  {speakerOn ? <Volume2 className="w-5 h-5" /> : <VolumeX className="w-5 h-5" />}
+                </span>
+                <span>{speakerOn ? 'Speaker' : 'Earpiece'}</span>
+              </button>
+
+              {isVideo ? (
+                <>
+                  <button
+                    type="button"
+                    onClick={() => void handleToggleVideoCamera()}
+                    aria-label={cameraOff ? 'Turn camera on' : 'Turn camera off'}
+                    className="flex flex-col items-center gap-1 text-[10px] font-medium text-white/90"
+                  >
+                    <span
+                      className={`w-12 h-12 rounded-full flex items-center justify-center transition-colors ${
+                        cameraOff ? 'bg-white text-slate-950' : 'bg-white/15 hover:bg-white/25 text-white'
+                      }`}
+                    >
+                      {cameraOff ? <VideoOff className="w-5 h-5" /> : <Video className="w-5 h-5" />}
+                    </span>
+                    <span>{cameraOff ? 'Cam Off' : 'Video'}</span>
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={handleToggleCameraFacing}
+                    disabled={switchingCamera || cameraOff || isScreenSharing}
+                    aria-label="Flip Camera"
+                    className="flex flex-col items-center gap-1 text-[10px] font-medium text-white/90 disabled:opacity-50"
+                  >
+                    <span className="w-12 h-12 rounded-full bg-white/15 hover:bg-white/25 flex items-center justify-center transition-colors">
+                      <RotateCw className={`w-5 h-5 ${switchingCamera ? 'animate-spin' : ''}`} />
+                    </span>
+                    <span>Flip</span>
+                  </button>
+                </>
+              ) : (
+                <button
+                  type="button"
+                  onClick={() => setActiveScreen('video_call')}
+                  aria-label="Switch to Video Call"
+                  className="flex flex-col items-center gap-1 text-[10px] font-medium text-white/90"
+                >
+                  <span className="w-12 h-12 rounded-full bg-white/15 hover:bg-white/25 flex items-center justify-center transition-colors">
+                    <Video className="w-5 h-5" />
                   </span>
-                  <span>{recordingSec}s</span>
+                  <span>Video</span>
                 </button>
               )}
 
               <button
                 type="button"
+                onClick={() => {
+                  const next = !micMuted;
+                  setMicMuted(next);
+                  streamRef.current?.getAudioTracks().forEach((t) => (t.enabled = !next));
+                }}
+                aria-label={micMuted ? 'Unmute microphone' : 'Mute microphone'}
+                className="flex flex-col items-center gap-1 text-[10px] font-medium text-white/90"
+              >
+                <span
+                  className={`w-12 h-12 rounded-full flex items-center justify-center transition-colors ${
+                    micMuted ? 'bg-white text-slate-950' : 'bg-white/15 hover:bg-white/25 text-white'
+                  }`}
+                >
+                  {micMuted ? <MicOff className="w-5 h-5" /> : <Mic className="w-5 h-5" />}
+                </span>
+                <span>{micMuted ? 'Unmute' : 'Mute'}</span>
+              </button>
+
+              <button
+                type="button"
                 onClick={() => void handleEndCall()}
                 aria-label="End Call"
-                className="flex flex-col items-center gap-1 text-[10px] font-medium text-white"
+                className="flex flex-col items-center gap-1 text-[10px] font-semibold text-white"
               >
-                <span className="w-13 h-13 rounded-full bg-[#ea0038] hover:bg-red-700 text-white flex items-center justify-center shadow-lg transition-colors">
+                <span className="w-13 h-13 rounded-full bg-[#ea0038] hover:bg-red-700 text-white flex items-center justify-center shadow-[0_8px_24px_rgba(234,0,56,0.5)] transition-colors">
                   <PhoneOff className="w-5 h-5" />
                 </span>
                 <span>End</span>
@@ -2270,30 +2267,30 @@ export function CallsView() {
         </div>
       </div>
 
-      {/* Collapsible Interactive Transparent Frosted-Glass Dial Pad w/ Soft Uncropped Wallpaper Backdrop */}
+      {/* Glass Marble Dial Pad with PK Chat Logo (Dove & Connected Globe) Visibly Behind */}
       {showDialPad && (
         <div
           id="pk-dialer-section"
-          className="relative overflow-hidden p-4 sm:p-5 rounded-3xl bg-[#dff1ff]/72 dark:bg-slate-900/65 backdrop-blur-2xl border border-[#7dd3fc]/80 dark:border-sky-400/30 w-full max-w-sm mx-auto sm:mx-0 space-y-3 shadow-[0_12px_38px_rgba(2,132,199,0.2)]"
+          className="relative overflow-hidden p-5 sm:p-6 rounded-[30px] pk-glass-marble w-full max-w-sm mx-auto space-y-4"
         >
-          {activeDialPadWallpaperUrl && (
-            <>
-              <img
-                src={activeDialPadWallpaperUrl}
-                alt="Dial Pad Wallpaper Backdrop"
-                aria-hidden="true"
-                className="pointer-events-none select-none absolute inset-0 w-full h-full object-contain object-center opacity-30 dark:opacity-25 z-0"
-              />
-              <div
-                aria-hidden="true"
-                className="pointer-events-none absolute inset-0 bg-gradient-to-b from-white/55 via-sky-50/45 to-white/65 dark:from-slate-950/65 dark:via-slate-900/55 dark:to-slate-950/75 backdrop-blur-[2px] z-0"
-              />
-            </>
-          )}
-          <div className="relative z-10 space-y-3">
+          {/* Visible PK Chat Logo Backdrop Behind Glass Marble Keypad */}
+          <div
+            aria-hidden="true"
+            className="pointer-events-none select-none absolute inset-0 z-0 flex items-center justify-center overflow-hidden"
+          >
+            <img
+              src={BRAND_LOGO_URL}
+              alt=""
+              loading="eager"
+              decoding="async"
+              className="w-[88%] max-w-[320px] h-auto object-contain opacity-45 drop-shadow-[0_10px_28px_rgba(2,132,199,0.28)]"
+            />
+          </div>
+
+          <div className="relative z-10 space-y-3.5">
           <div className="flex items-center justify-between gap-2">
-            <span className="text-xs font-bold text-[#0077B6] dark:text-[#38bdf8]">
-              International Frosted Dial Pad
+            <span className="text-xs font-extrabold text-[#0c4a6e] dark:text-[#38bdf8] drop-shadow-[0_1px_1px_rgba(255,255,255,0.85)]">
+              PK Chat Glass Marble Dial Pad
             </span>
             <div className="flex items-center gap-2">
               <button
@@ -2309,7 +2306,7 @@ export function CallsView() {
                     })
                   );
                 }}
-                className="text-[11px] font-semibold text-[#0284c7] dark:text-[#38bdf8] hover:underline inline-flex items-center gap-1"
+                className="text-[11px] font-bold text-[#0369a1] dark:text-[#38bdf8] hover:underline inline-flex items-center gap-1"
               >
                 <BellPlus className="w-3.5 h-3.5" />
                 <span>Remember</span>
@@ -2325,37 +2322,52 @@ export function CallsView() {
                   setSaveContactNotice(null);
                   setShowSaveContactForm((v) => !v);
                 }}
-                className="text-[11px] font-semibold text-blue-700 dark:text-blue-400 hover:underline inline-flex items-center gap-1"
+                className="text-[11px] font-bold text-blue-800 dark:text-blue-400 hover:underline inline-flex items-center gap-1"
               >
                 <UserPlus className="w-3.5 h-3.5" />
                 <span>Save Contact</span>
               </button>
-              {dialNumber && (
+              {(dialNumber || dialSearchQuery) && (
                 <button
                   type="button"
                   onClick={() => {
                     setDialNumber('');
+                    setDialSearchQuery('');
                     setShowSaveContactForm(false);
                   }}
-                  className="text-[11px] font-semibold text-slate-500 hover:text-rose-600"
+                  className="text-[11px] font-bold text-slate-700 hover:text-rose-600"
                 >
                   Clear
                 </button>
               )}
             </div>
           </div>
+
+          {/* Direct Contact / Number Search inside Dial Pad */}
+          <div className="relative">
+            <Search className="w-4 h-4 text-[#0369a1] absolute left-3 top-2.5 pointer-events-none" />
+            <input
+              type="text"
+              value={dialSearchQuery}
+              onChange={(e) => setDialSearchQuery(e.target.value)}
+              placeholder="Search contacts or phone numbers..."
+              aria-label="Search contacts or phone numbers"
+              className="w-full pl-9 pr-3 py-2 rounded-xl bg-white/55 dark:bg-slate-950/65 backdrop-blur-md border border-white/75 dark:border-slate-700 text-xs font-medium text-slate-900 dark:text-white placeholder:text-slate-600 dark:placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-[#0284c7]"
+            />
+          </div>
+
           <div className="flex items-center gap-2">
             <input
               type="tel"
               value={dialNumber}
               onChange={(e) => setDialNumber(e.target.value.replace(/[^\d+*# -]/g, ''))}
               placeholder="Enter phone number (+94...)"
-              className="flex-1 px-3.5 py-2.5 rounded-xl bg-[#e6f4ff]/75 dark:bg-slate-950/70 backdrop-blur-md border border-[#7dd3fc]/70 dark:border-slate-800 text-base font-mono tracking-wider"
+              className="flex-1 px-3.5 py-2.5 rounded-2xl bg-white/60 dark:bg-slate-950/70 backdrop-blur-md border border-white/80 dark:border-slate-800 text-lg font-mono font-bold tracking-wider text-slate-900 dark:text-white text-center shadow-inner"
             />
             <button
               type="button"
               onClick={() => setDialNumber((n) => n.slice(0, -1))}
-              className="p-2.5 rounded-xl bg-[#d6edff]/80 dark:bg-slate-800 hover:bg-[#bae6fd]/80 dark:hover:bg-slate-700 border border-[#7dd3fc]/50"
+              className="p-3 rounded-2xl pk-marble-key text-slate-800 dark:text-white"
               aria-label="Backspace digit"
             >
               <Delete className="w-4 h-4" />
@@ -2391,9 +2403,9 @@ export function CallsView() {
                 setShowSaveContactForm(false);
                 setSaveContactNotice(`Saved "${cleanName}" (${cleanPhone}) to Dial Pad Contacts.`);
               }}
-              className="p-3 rounded-2xl bg-blue-50 dark:bg-blue-950/40 border border-blue-200 dark:border-blue-900 space-y-2"
+              className="p-3 rounded-2xl bg-sky-50/85 dark:bg-blue-950/50 backdrop-blur-md border border-white/80 dark:border-blue-900 space-y-2"
             >
-              <p className="text-[11px] font-semibold text-blue-900 dark:text-blue-200">
+              <p className="text-[11px] font-bold text-slate-900 dark:text-blue-200">
                 Save {dialNumber} to Speed Dial Contacts
               </p>
               <div className="flex items-center gap-2">
@@ -2403,18 +2415,18 @@ export function CallsView() {
                   onChange={(e) => setNewContactName(e.target.value)}
                   placeholder="Contact name (e.g. Amma, Ravi)"
                   maxLength={50}
-                  className="flex-1 min-w-0 px-3 py-1.5 rounded-xl bg-[#e8f5ff]/85 dark:bg-slate-900 border border-[#7dd3fc]/75 dark:border-blue-800 text-xs"
+                  className="flex-1 min-w-0 px-3 py-1.5 rounded-xl bg-white/80 dark:bg-slate-900 border border-[#7dd3fc]/75 dark:border-blue-800 text-xs text-slate-900 dark:text-white"
                 />
                 <button
                   type="submit"
-                  className="px-3 py-1.5 rounded-xl bg-blue-700 hover:bg-blue-800 text-white text-xs font-semibold shrink-0"
+                  className="px-3 py-1.5 rounded-xl bg-[#0284c7] hover:bg-[#0369a1] text-white text-xs font-semibold shrink-0"
                 >
                   Save
                 </button>
                 <button
                   type="button"
                   onClick={() => setShowSaveContactForm(false)}
-                  className="px-2.5 py-1.5 rounded-xl bg-[#dff1ff]/80 dark:bg-slate-800 border border-[#7dd3fc]/60 text-xs font-semibold shrink-0"
+                  className="px-2.5 py-1.5 rounded-xl bg-white/70 dark:bg-slate-800 border border-[#7dd3fc]/60 text-xs font-semibold shrink-0"
                 >
                   Cancel
                 </button>
@@ -2423,20 +2435,34 @@ export function CallsView() {
           )}
 
           {saveContactNotice && (
-            <div className="px-3 py-2 rounded-xl bg-sky-50/90 dark:bg-sky-950/50 border border-[#bae6fd] dark:border-sky-800 flex items-center justify-between gap-2 text-[11px] text-[#0369a1] dark:text-sky-200">
+            <div className="px-3 py-2 rounded-xl bg-sky-50/85 dark:bg-sky-950/60 backdrop-blur-md border border-white/80 dark:border-sky-800 flex items-center justify-between gap-2 text-[11px] text-[#0369a1] dark:text-sky-200 font-semibold">
               <span>{saveContactNotice}</span>
               <button
                 type="button"
                 onClick={() => setSaveContactNotice(null)}
-                className="font-semibold underline shrink-0"
+                className="font-bold underline shrink-0"
               >
                 Dismiss
               </button>
             </div>
           )}
 
-          <div className="grid grid-cols-3 gap-2">
-            {['1', '2', '3', '4', '5', '6', '7', '8', '9', '*', '0', '#'].map((digit) => (
+          {/* Natural WhatsApp-Proportioned Glass Marble Number Keys */}
+          <div className="grid grid-cols-3 gap-3.5 px-1">
+            {[
+              { d: '1', sub: '' },
+              { d: '2', sub: 'ABC' },
+              { d: '3', sub: 'DEF' },
+              { d: '4', sub: 'GHI' },
+              { d: '5', sub: 'JKL' },
+              { d: '6', sub: 'MNO' },
+              { d: '7', sub: 'PQRS' },
+              { d: '8', sub: 'TUV' },
+              { d: '9', sub: 'WXYZ' },
+              { d: '*', sub: '' },
+              { d: '0', sub: '+' },
+              { d: '#', sub: '' },
+            ].map(({ d: digit, sub }) => (
               <button
                 key={digit}
                 type="button"
@@ -2444,14 +2470,21 @@ export function CallsView() {
                 onDoubleClick={() => {
                   if (digit === '0') setDialNumber((n) => `${n.slice(0, -1)}+`.slice(0, 20));
                 }}
-                className="min-h-[48px] py-2.5 rounded-2xl bg-[#dff1ff]/68 dark:bg-slate-950/45 backdrop-blur-md border border-[#7dd3fc]/75 dark:border-slate-700/60 hover:bg-[#bae6fd]/75 dark:hover:bg-sky-900/40 text-base font-bold font-mono text-slate-900 dark:text-white active:scale-95 transition-all shadow-xs"
+                className="min-h-[62px] py-2 rounded-full pk-marble-key flex flex-col items-center justify-center text-slate-950 dark:text-white transition-all"
               >
-                {digit}
-                {digit === '0' && <span className="text-[10px] text-slate-500 dark:text-slate-400 ml-1">+</span>}
+                <span className="text-2xl font-bold leading-none drop-shadow-[0_1px_1px_rgba(255,255,255,0.85)]">
+                  {digit}
+                </span>
+                {sub && (
+                  <span className="text-[10px] font-bold tracking-widest text-slate-700 dark:text-sky-200 mt-1 leading-none">
+                    {sub}
+                  </span>
+                )}
               </button>
             ))}
           </div>
-          <div className="grid grid-cols-3 gap-2 pt-1">
+
+          <div className="grid grid-cols-3 gap-2.5 pt-1">
             <button
               type="button"
               onClick={() => {
@@ -2464,10 +2497,10 @@ export function CallsView() {
                 setShowDialPad(false);
                 void handleStartLiveCall(undefined, 'audio');
               }}
-              className="py-2.5 rounded-full bg-[#00B4D8] hover:bg-[#0077B6] text-white text-xs font-bold flex items-center justify-center gap-1.5 shadow-[0_0_16px_rgba(0,180,216,0.5)] transition-all"
+              className="min-h-[50px] py-2.5 rounded-full bg-[#0284c7] hover:bg-[#0369a1] text-white text-sm font-bold flex items-center justify-center gap-1.5 shadow-[0_6px_20px_rgba(2,132,199,0.4)] transition-all"
             >
               <Phone className="w-4 h-4" />
-              <span>Call</span>
+              <span>Audio</span>
             </button>
             <button
               type="button"
@@ -2480,10 +2513,10 @@ export function CallsView() {
                 setShowDialPad(false);
                 void handleStartLiveCall(undefined, 'video');
               }}
-              className="py-2.5 rounded-xl bg-blue-700 hover:bg-blue-800 text-white text-xs font-semibold flex items-center justify-center gap-1.5"
+              className="min-h-[50px] py-2.5 rounded-full bg-blue-700 hover:bg-blue-800 text-white text-sm font-bold flex items-center justify-center gap-1.5 shadow-[0_6px_18px_rgba(29,78,216,0.35)]"
             >
-              <Video className="w-3.5 h-3.5" />
-              <span>HD Video</span>
+              <Video className="w-4 h-4" />
+              <span>Video</span>
             </button>
             <button
               type="button"
@@ -2524,25 +2557,33 @@ export function CallsView() {
                   );
                 }
               }}
-              className="py-2.5 rounded-xl bg-slate-900 dark:bg-slate-800 hover:bg-slate-800 dark:hover:bg-slate-700 text-white text-xs font-semibold flex items-center justify-center gap-1.5"
+              className="min-h-[50px] py-2.5 rounded-full bg-slate-900/90 dark:bg-slate-800 hover:bg-slate-800 text-white text-xs font-bold flex items-center justify-center gap-1.5"
             >
               <MessageSquare className="w-3.5 h-3.5" />
-              <span>Message</span>
+              <span>Chat</span>
             </button>
           </div>
 
-          {(savedDialContacts.length > 0 || contacts.length > 0) && (
-            <div className="pt-3 border-t border-slate-200 dark:border-slate-800 space-y-2">
-              <div className="flex items-center justify-between text-[11px] font-bold text-slate-600 dark:text-slate-300">
+          {(savedDialContacts.length > 0 || contacts.length > 0) && (() => {
+            const q = (dialSearchQuery.trim() || dialNumber.trim()).toLowerCase();
+            const filteredSaved = savedDialContacts.filter(
+              (c) =>
+                !q ||
+                c.name.toLowerCase().includes(q) ||
+                c.phone.replace(/\s+/g, '').toLowerCase().includes(q.replace(/\s+/g, ''))
+            );
+            return (
+            <div className="pt-3 border-t border-white/60 dark:border-slate-800 space-y-2">
+              <div className="flex items-center justify-between text-[11px] font-bold text-slate-800 dark:text-slate-300">
                 <span>
-                  PK Chat Contacts ({savedDialContacts.length + contacts.length})
+                  PK Chat Contacts ({filteredSaved.length + contacts.length})
                 </span>
               </div>
               <div className="space-y-1.5 max-h-48 overflow-y-auto pr-1">
-                {savedDialContacts.map((contact) => (
+                {filteredSaved.map((contact) => (
                   <div
                     key={contact.id}
-                    className="flex items-center justify-between gap-2 px-3 py-2 rounded-xl bg-[#e3f3ff]/75 dark:bg-slate-950/75 backdrop-blur-md border border-[#7dd3fc]/65 dark:border-slate-800 text-xs"
+                    className="flex items-center justify-between gap-2 px-3 py-2 rounded-xl bg-white/55 dark:bg-slate-950/75 backdrop-blur-md border border-white/75 dark:border-slate-800 text-xs"
                   >
                     <button
                       type="button"
@@ -2645,13 +2686,21 @@ export function CallsView() {
                     </div>
                   </div>
                 ))}
-                {contacts.map((contact) => {
+                {contacts
+                  .filter(
+                    (contact) =>
+                      !q ||
+                      contact.displayName.toLowerCase().includes(q) ||
+                      (contact.phoneMasked || '').toLowerCase().includes(q) ||
+                      contact.country.toLowerCase().includes(q)
+                  )
+                  .map((contact) => {
                   const prof = directoryProfiles.find((p) => p.uid === contact.contactUid);
                   const isContactOnline = prof?.onlineStatus === 'online';
                   return (
                   <div
                     key={contact.contactUid}
-                    className="flex items-center justify-between gap-2 px-3 py-2 rounded-xl bg-[#e3f3ff]/75 dark:bg-slate-950/45 backdrop-blur-md border border-[#7dd3fc]/70 dark:border-slate-800 text-xs"
+                    className="flex items-center justify-between gap-2 px-3 py-2 rounded-xl bg-white/55 dark:bg-slate-950/45 backdrop-blur-md border border-white/75 dark:border-slate-800 text-xs"
                   >
                     <div className="min-w-0 flex-1">
                       <p className="font-semibold text-slate-900 dark:text-white truncate">
@@ -2719,7 +2768,8 @@ export function CallsView() {
                 })}
               </div>
             </div>
-          )}
+            );
+          })()}
           </div>
         </div>
       )}

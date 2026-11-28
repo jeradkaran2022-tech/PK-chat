@@ -11,8 +11,7 @@ import {
   getDocFromServer,
   getFirestore,
   initializeFirestore,
-  persistentLocalCache,
-  persistentMultipleTabManager,
+  memoryLocalCache,
 } from 'firebase/firestore';
 import { getStorage } from 'firebase/storage';
 import firebaseConfig from '../../firebase-applet-config.json';
@@ -26,24 +25,12 @@ function createResilientFirestore(): Firestore {
       app,
       {
         experimentalAutoDetectLongPolling: true,
-        localCache: persistentLocalCache({
-          tabManager: persistentMultipleTabManager(),
-        }),
+        localCache: memoryLocalCache(),
       },
       firebaseConfig.firestoreDatabaseId
     );
   } catch {
-    try {
-      return initializeFirestore(
-        app,
-        {
-          experimentalAutoDetectLongPolling: true,
-        },
-        firebaseConfig.firestoreDatabaseId
-      );
-    } catch {
-      return getFirestore(app, firebaseConfig.firestoreDatabaseId);
-    }
+    return getFirestore(app, firebaseConfig.firestoreDatabaseId);
   }
 }
 

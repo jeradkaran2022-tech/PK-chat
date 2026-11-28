@@ -1357,7 +1357,7 @@ export function SafetyAndDisasterView() {
         </div>
       )}
 
-      <MessengerDisasterAlerts maxVisible={4} />
+      <MessengerDisasterAlerts variant="chat_message" maxVisible={4} />
 
       <div className="grid md:grid-cols-2 gap-4">
         {visibleDisasters.length === 0 ? (

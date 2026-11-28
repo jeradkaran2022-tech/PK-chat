@@ -20,6 +20,31 @@ import {
   TranslationConfidenceLevel,
 } from '../types/pkchat';
 
+/**
+ * Returns true when running on a purely static frontend host (e.g., GitHub Pages)
+ * where Express /api/* endpoints are not mounted, preventing noisy HTTP 404 errors.
+ */
+export function isStaticHostedWithoutApi(): boolean {
+  if (typeof window === 'undefined') return false;
+  const host = (window.location?.hostname || '').toLowerCase();
+  return host.endsWith('.github.io') || window.location?.protocol === 'file:';
+}
+
+const DEFAULT_STATIC_AD_CONFIG: RemoteAdPricingConfig = {
+  billingLibraryVersion: '8.0.0',
+  smallAdPriceUsd: 5,
+  largeAdPriceUsd: 10,
+  unlimitedAdPriceUsd: 100,
+  unlimitedAdDurationDays: 365,
+  annualProPriceUsd: 10,
+  freeTrialDays: 90,
+  smallAdSku: 'pkchat_sponsored_small_5usd',
+  largeAdSku: 'pkchat_sponsored_large_10usd',
+  unlimitedAdSku: 'pkchat_unlimited_ads_annual_100usd',
+  annualProSku: 'pkchat_annual_pro_10usd',
+  updatedAt: new Date(0).toISOString(),
+};
+
 async function apiFetchJson<T>(
   url: string,
   init: RequestInit = {},
@@ -401,6 +426,27 @@ export interface SecurityStatusPayload {
 }
 
 export async function fetchSecurityStatus(): Promise<SecurityStatusPayload> {
+  if (isStaticHostedWithoutApi()) {
+    return {
+      state: {
+        stateId: 'global',
+        status: 'NORMAL',
+        threatLevel: 'low',
+        reasonCode: 'SYSTEM_HEALTHY',
+        restrictLogin: false,
+        restrictMessages: false,
+        restrictAccountChanges: false,
+        restrictCalls: false,
+        recheckIntervalSeconds: 60,
+        threatResolved: true,
+        updatedBy: 'static_client_guard',
+        updatedAt: new Date().toISOString(),
+      },
+      incidents: [],
+      auditLogs: [],
+      approvals: [],
+    };
+  }
   return apiFetchJson<SecurityStatusPayload>(
     '/api/security/status',
     {},
@@ -857,6 +903,9 @@ export async function blockMasterCoreAlert(params: {
 // =========================================================================
 
 export async function fetchAdPlatformConfig(): Promise<RemoteAdPricingConfig> {
+  if (isStaticHostedWithoutApi()) {
+    return DEFAULT_STATIC_AD_CONFIG;
+  }
   return apiFetchJson<RemoteAdPricingConfig>(
     '/api/ads/config',
     {},
@@ -916,6 +965,9 @@ export async function saveBusinessProfileCard(params: {
 export async function fetchBusinessProfileCard(
   uid: string
 ): Promise<{ profile: BusinessAdCardProfile | null }> {
+  if (isStaticHostedWithoutApi()) {
+    return { profile: null };
+  }
   return apiFetchJson(
     `/api/ads/business-profile/${encodeURIComponent(uid)}`,
     {},
@@ -951,6 +1003,14 @@ export async function fetchAdvertiserUnlimitedPassStatus(
   uid: string,
   phone?: string
 ): Promise<AdvertiserUnlimitedPassStatus> {
+  if (isStaticHostedWithoutApi()) {
+    return {
+      active: false,
+      vipFree: false,
+      sku: 'pkchat_unlimited_ads_annual_100usd',
+      pricePaidUsd: 0,
+    };
+  }
   const qs = phone ? `?phone=${encodeURIComponent(phone)}` : '';
   return apiFetchJson(
     `/api/ads/unlimited/status/${encodeURIComponent(uid)}${qs}`,
@@ -1050,6 +1110,17 @@ export async function fetchPublicSponsoredAds(params?: {
   hasMore: boolean;
   config: RemoteAdPricingConfig;
 }> {
+  if (isStaticHostedWithoutApi()) {
+    return {
+      ads: [],
+      page: params?.page || 1,
+      pageSize: params?.pageSize || 6,
+      total: 0,
+      totalPages: 1,
+      hasMore: false,
+      config: DEFAULT_STATIC_AD_CONFIG,
+    };
+  }
   const qs = new URLSearchParams();
   if (params?.country) qs.set('country', params.country);
   if (params?.language) qs.set('language', params.language);
@@ -1095,6 +1166,9 @@ export async function createAdFulfillmentRequest(params: {
 export async function fetchMyAdRequests(uid: string): Promise<{
   requests: AdFulfillmentRequest[];
 }> {
+  if (isStaticHostedWithoutApi()) {
+    return { requests: [] };
+  }
   return apiFetchJson(
     `/api/ads/requests/mine?uid=${encodeURIComponent(uid)}`,
     {},
@@ -1184,6 +1258,9 @@ export async function verifyAdViolationAdmin(params: {
 export async function fetchMyAdViolationWarnings(
   uid: string
 ): Promise<{ warnings: AdViolationWarningNotice[] }> {
+  if (isStaticHostedWithoutApi()) {
+    return { warnings: [] };
+  }
   return apiFetchJson(
     `/api/ads/warnings/${encodeURIComponent(uid)}`,
     {},

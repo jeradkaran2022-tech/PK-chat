@@ -73,6 +73,16 @@ export function OnboardingFlow() {
   const recoveryVideoRef = useRef<HTMLVideoElement | null>(null);
   const recoveryStreamRef = useRef<MediaStream | null>(null);
 
+  // First-time PK Chat Welcome Screen gate ("Welcome to PK Chat" -> "Agree and Continue")
+  const [welcomeAgreed, setWelcomeAgreed] = useState<boolean>(() => {
+    if (firebaseUser) return true;
+    try {
+      return sessionStorage.getItem('pk_onboarding_3step_active') === '1';
+    } catch {
+      return false;
+    }
+  });
+
   // Step 2 live camera / photo verification state
   const [photoVerified, setPhotoVerified] = useState(false);
   const [step2CamActive, setStep2CamActive] = useState(false);
@@ -319,6 +329,7 @@ export function OnboardingFlow() {
       seededProfileUidRef.current = null;
       return;
     }
+    setWelcomeAgreed(true);
     if (seededProfileUidRef.current === uid) return;
     seededProfileUidRef.current = uid;
     const gmailSeedName =
@@ -477,6 +488,21 @@ export function OnboardingFlow() {
     }
   };
 
+  const handleAgreeAndContinueWelcome = () => {
+    setLocalError(null);
+    setLocalSuccess(null);
+    try {
+      sessionStorage.setItem('pk_onboarding_3step_active', '1');
+      localStorage.setItem('pk_welcome_agreed', '1');
+    } catch {
+      // Safe fallback in restricted iframe storage
+    }
+    setWelcomeAgreed(true);
+    if (activeScreen === 'splash') {
+      setActiveScreen('welcome');
+    }
+  };
+
   const handleStep3OkNextToProfile = async (e: React.FormEvent) => {
     e.preventDefault();
     setLocalError(null);
@@ -499,10 +525,34 @@ export function OnboardingFlow() {
       if (firebaseUser) {
         await linkPhoneForDiscovery(validPhone, allowPhoneDiscovery, selectedCountry.dialCode);
       }
-      const { code: langCode } = resolveWelcomeLanguagePayload(welcomeLangChoice);
+      const { code: langCode, name: langName } = resolveWelcomeLanguagePayload(welcomeLangChoice);
       setChosenLangCode((prev) => prev || langCode);
-      setLocalSuccess(`Phone ${validPhone} verified (OTP-free). Review your profile details.`);
-      setActiveScreen('profile_create');
+      setActiveUserMode(userModeChoice, firebaseUser?.uid);
+      try {
+        sessionStorage.removeItem('pk_onboarding_3step_active');
+        if (firebaseUser?.uid) {
+          localStorage.setItem(`pk_seq_onboarding_done_${firebaseUser.uid}`, '1');
+        }
+      } catch {
+        // ignore storage errors
+      }
+      setLocalSuccess(`Phone ${validPhone} verified! Opening PK Chat...`);
+      await completeOnboardingProfile({
+        fullName:
+          fullName.trim() ||
+          firebaseUser?.displayName?.trim() ||
+          (firebaseUser?.email ? firebaseUser.email.split('@')[0].replace(/[._-]+/g, ' ').trim() : '') ||
+          'PK Chat Member',
+        avatarUrl: avatarUrl || firebaseUser?.photoURL || '',
+        country: selectedCountry,
+        preferredLanguageCode: langCode,
+        preferredLanguageName: langName,
+        trusted: trustDevice,
+        phoneNumber: validPhone,
+        allowPhoneDiscovery,
+        userMode: userModeChoice,
+        allowLocalFallback: true,
+      });
     } catch (err) {
       setLocalError(err instanceof Error ? err.message : 'Unable to save phone number.');
     } finally {
@@ -555,38 +605,112 @@ export function OnboardingFlow() {
     }
   };
 
-  // Screen 1: Splash Screen
-  if (activeScreen === 'splash') {
+  // Screen 1: First-Time PK Chat Welcome Screen (strictly branded as PK Chat)
+  if (activeScreen === 'splash' || (activeScreen === 'welcome' && !welcomeAgreed && !firebaseUser)) {
     return (
-      <div className="min-h-screen flex flex-col items-center justify-center bg-gradient-to-br from-[#cde9ff] via-[#e3f4ff] to-[#b5e0ff] dark:from-[#0b132b] dark:via-[#0a192f] dark:to-[#020617] px-6">
-        <div className="flex flex-col items-center text-center max-w-sm rounded-3xl p-8 bg-[#dff1ff]/78 dark:bg-[#0f172a]/80 backdrop-blur-2xl border border-[#7dd3fc]/80 dark:border-[#38bdf8]/40 shadow-[0_25px_50px_rgba(2,132,199,0.28)]">
-          <div className="relative mb-6">
-            <div className="absolute -inset-2 rounded-full bg-gradient-to-tr from-[#0284c7]/40 via-[#38bdf8]/45 to-[#1d4ed8]/40 blur-lg" aria-hidden="true" />
-            <div className="relative w-32 h-32 rounded-3xl overflow-hidden bg-[#01123A] p-0.5 ring-2 ring-[#38bdf8] shadow-[0_0_36px_rgba(0,198,255,0.55)]">
+      <div
+        data-pk-welcome-screen="true"
+        className="min-h-[100dvh] flex flex-col items-center justify-between bg-gradient-to-br from-[#cde9ff] via-[#e4f5ff] to-[#b5e0ff] px-5 py-8 sm:py-12"
+      >
+        <GlobalSecurityOverlay />
+        <StoreDownloadModal open={showStoreModal} onClose={() => setShowStoreModal(false)} />
+
+        {/* Top bar */}
+        <div className="w-full max-w-md flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <span className="w-8 h-8 rounded-xl bg-[#01123A] p-0.5 ring-1 ring-[#38bdf8]/80">
               <img
                 src={BRAND_LOGO_URL}
-                alt="PK CHAT global dove and unity logo"
+                alt="PK Chat"
+                className="w-full h-full rounded-[10px] object-cover"
+                referrerPolicy="no-referrer"
+              />
+            </span>
+            <span className="text-sm font-bold text-[#0369a1]">PK Chat</span>
+          </div>
+          <button
+            type="button"
+            onClick={() => setShowStoreModal(true)}
+            className="min-h-[38px] px-3 py-1.5 rounded-xl bg-[#eef8ff]/85 border border-[#7dd3fc]/80 hover:bg-[#e0f2fe] text-[#0369a1] text-xs font-semibold flex items-center gap-1.5"
+          >
+            <Download className="w-3.5 h-3.5" />
+            <span>Install / Stores</span>
+          </button>
+        </div>
+
+        {/* Centered PK Chat Welcome Card */}
+        <div className="my-auto w-full max-w-md rounded-3xl p-7 sm:p-9 bg-[#e3f3ff]/82 backdrop-blur-2xl border border-[#7dd3fc]/80 shadow-[0_25px_55px_rgba(2,132,199,0.24)] flex flex-col items-center text-center">
+          <div className="relative mb-6">
+            <div
+              className="absolute -inset-2.5 rounded-full bg-gradient-to-tr from-[#0284c7]/40 via-[#38bdf8]/45 to-[#1d4ed8]/35 blur-lg"
+              aria-hidden="true"
+            />
+            <div className="relative w-32 h-32 sm:w-36 sm:h-36 rounded-3xl overflow-hidden bg-[#01123A] p-0.5 ring-2 ring-[#38bdf8] shadow-[0_0_36px_rgba(0,198,255,0.5)]">
+              <img
+                src={BRAND_LOGO_URL}
+                alt="PK Chat dove and globe logo"
                 className="w-full h-full rounded-[22px] object-cover"
                 referrerPolicy="no-referrer"
               />
             </div>
           </div>
-          <h1 className="text-3xl font-bold tracking-tight text-slate-900 dark:text-white">
-            PK CHAT
+
+          <h1 className="text-2xl sm:text-3xl font-extrabold tracking-tight text-slate-900">
+            Welcome to PK Chat
           </h1>
-          <p className="mt-2 text-base font-medium text-[#0284c7] dark:text-[#38bdf8]">
+          <p className="mt-2 text-sm font-semibold text-[#0284c7]">
             One World, One Chat.
           </p>
-          <p className="mt-4 text-xs text-slate-500 dark:text-slate-300">
-            24/7 Cloud Messaging · Real-Time Language Translation
+          <p className="mt-2.5 text-xs sm:text-sm text-slate-600 leading-relaxed max-w-xs">
+            Fast, private global messaging, voice &amp; video calls, live translation, and family safety.
           </p>
+
+          {/* 3-Step Verification Overview */}
+          <div className="mt-5 w-full grid grid-cols-3 gap-2 text-[11px] font-semibold text-[#0369a1]">
+            <div className="rounded-xl bg-[#eef8ff]/90 border border-[#7dd3fc]/70 px-2 py-2">
+              1. Gmail Login
+            </div>
+            <div className="rounded-xl bg-[#eef8ff]/90 border border-[#7dd3fc]/70 px-2 py-2">
+              2. Live Photo
+            </div>
+            <div className="rounded-xl bg-[#eef8ff]/90 border border-[#7dd3fc]/70 px-2 py-2">
+              3. Phone Setup
+            </div>
+          </div>
+
+          <p className="mt-5 text-[11px] text-slate-600 leading-relaxed">
+            Read our Privacy Policy. Tap <strong className="text-slate-800">&ldquo;Agree and Continue&rdquo;</strong> to accept the PK Chat Terms of Service and start verification.
+          </p>
+
           <button
-            onClick={() => setActiveScreen('welcome')}
-            className="mt-8 px-6 py-2.5 rounded-xl bg-gradient-to-r from-[#0284c7] to-[#0072ff] dark:from-[#00c6ff] dark:to-[#0072ff] hover:brightness-110 text-white text-sm font-semibold transition-all whitespace-nowrap shadow-[0_0_18px_rgba(0,198,255,0.4)]"
+            id="pk-welcome-agree-btn"
+            type="button"
+            onClick={handleAgreeAndContinueWelcome}
+            className="mt-5 w-full min-h-[50px] px-6 py-3.5 rounded-2xl bg-gradient-to-r from-[#0284c7] to-[#0077B6] hover:brightness-105 text-white text-sm sm:text-base font-bold transition-all shadow-[0_8px_24px_rgba(2,132,199,0.38)] flex items-center justify-center gap-2"
           >
-            Continue
+            <span>Agree and Continue</span>
+            <ArrowRight className="w-4 h-4" />
+          </button>
+
+          <button
+            type="button"
+            onClick={() => {
+              handleAgreeAndContinueWelcome();
+              setUserTypeChoice('old');
+              setBiometricStatus(null);
+              setShowBiometricRecoveryModal(true);
+              void handleStartEyeFaceCameraCheck();
+            }}
+            className="mt-3.5 text-xs font-semibold text-[#0284c7] hover:underline"
+          >
+            Returning User? Open Camera &amp; Recover Account
           </button>
         </div>
+
+        {/* Footer */}
+        <p className="text-[11px] text-slate-500 text-center">
+          PK Chat · Powered by Firebase &amp; Global Cloud Translation
+        </p>
       </div>
     );
   }
@@ -751,7 +875,7 @@ export function OnboardingFlow() {
                       <span>Step 1 of 3 · Sign in with Gmail Account</span>
                     </h2>
                     <p className="text-xs text-slate-600">
-                      Start with your Gmail account for instant WhatsApp-style cloud entry, or choose your mode below. Includes 90-day Free Trial &amp; VIP Founder Life Limit Free Access.
+                      Start with your Gmail account for instant PK Chat cloud verification, or choose your mode below. Includes 90-day Free Trial &amp; VIP Founder Life Limit Free Access.
                     </p>
                   </div>
 
@@ -1095,7 +1219,7 @@ export function OnboardingFlow() {
                       disabled={authBusy || isLockedDown || !phoneLocal.trim()}
                       className="w-full min-h-[48px] py-3 rounded-xl bg-gradient-to-r from-[#0284c7] to-[#0ea5e9] hover:brightness-105 disabled:opacity-60 text-white text-sm font-bold flex items-center justify-center gap-2 shadow-sm"
                     >
-                      <span>{authBusy ? 'Saving Phone...' : 'OK / Next'}</span>
+                      <span>{authBusy ? 'Opening PK Chat...' : 'OK / Next · Open PK Chat'}</span>
                       <ArrowRight className="w-4 h-4" />
                     </button>
                   </form>

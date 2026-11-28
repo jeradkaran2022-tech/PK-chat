@@ -465,20 +465,22 @@ async function main() {
     });
     assert.equal(locked.isLocked, true);
     assert.ok(locked.remainingSeconds >= 595 && locked.remainingSeconds <= 600);
-    assert.ok(locked.message?.includes('பாதுகாப்பு காரணங்களுக்காக'));
+    assert.ok(locked.message?.includes('App temporarily paused for verified security protection'));
+    assert.ok(shield.checkSecurityStatus('ta').message?.includes('பாதுகாப்பு காரணங்களுக்காக'));
     assert.ok(capturedAlert.includes('Tamper test detected'));
     assert.ok(Boolean(localStorage.getItem(shield.STORAGE_KEY_ALERT_SENT)));
 
-    // Anti-debug toggle & viewport check sanity
+    // Anti-debug toggle (off by default to prevent false lockouts on normal phones/APKs) & viewport sanity
+    assert.equal(shield.isAntiDebugEnabled(), false);
+    shield.setAntiDebugEnabled(true);
     assert.equal(shield.isAntiDebugEnabled(), true);
     shield.setAntiDebugEnabled(false);
     assert.equal(shield.isAntiDebugEnabled(), false);
-    shield.setAntiDebugEnabled(true);
     assert.equal(shield.isDevToolsViewportAnomaly(160), false);
 
     // Expired timestamp should clear automatically
     localStorage.setItem(shield.STORAGE_KEY_LOCK_TIME, String(Date.now() - 1000));
-    const resumed = shield.checkSecurityStatus('ta');
+    const resumed = shield.checkSecurityStatus('en');
     assert.equal(resumed.isLocked, false);
     assert.equal(localStorage.getItem(shield.STORAGE_KEY_LOCK_TIME), null);
   });
@@ -906,12 +908,12 @@ async function main() {
     stopRingingLoop();
   });
 
-  await runCase('founderNameGuard: enforces canonical English "Prashanth keransiya" without Tamil transliteration', () => {
-    assert.equal(enforceCanonicalFounderName('நிறுவனர் பிரசாத் கிரன்சியா'), 'நிறுவனர் Prashanth keransiya');
-    assert.equal(enforceCanonicalFounderName('பிரசாந்த் கிரன்சியா குடும்பத்தினர்'), 'Prashanth keransiya குடும்பத்தினர்');
-    assert.equal(enforceCanonicalFounderName('Founder Prashath Keransiya'), 'Founder Prashanth keransiya');
-    assert.equal(enforceCanonicalFounderName('Prashanth Keransiya'), 'Prashanth keransiya');
-    assert.equal(enforceCanonicalFounderName('Prasanth Keransiya'), 'Prashanth keransiya');
+  await runCase('founderNameGuard: enforces canonical English "Prashanth Keransiya" without Tamil transliteration', () => {
+    assert.equal(enforceCanonicalFounderName('நிறுவனர் பிரசாத் கிரன்சியா'), 'நிறுவனர் Prashanth Keransiya');
+    assert.equal(enforceCanonicalFounderName('பிரசாந்த் கிரன்சியா குடும்பத்தினர்'), 'Prashanth Keransiya குடும்பத்தினர்');
+    assert.equal(enforceCanonicalFounderName('Founder Prashath Keransiya'), 'Founder Prashanth Keransiya');
+    assert.equal(enforceCanonicalFounderName('Prashanth keransiya'), 'Prashanth Keransiya');
+    assert.equal(enforceCanonicalFounderName('Prasanth Keransiya'), 'Prashanth Keransiya');
   });
 
   await runCase('appearanceTheme: defaults to non-cropped wallpaper fit (contain) and persists locked light-blue glass styles', () => {
@@ -1590,8 +1592,14 @@ async function main() {
     assert.ok(greetings.some((g) => g.occasion === 'christmas' && g.activeToday));
     assert.ok(greetings.some((g) => g.occasion === 'new_year'));
     assert.ok(greetings.some((g) => g.occasion === 'ramzan'));
-    assert.ok(greetings.every((g) => g.founderName === 'Prashanth keransiya'));
-    assert.ok(greetings.every((g) => g.body.includes('Prashanth keransiya') && !/wife/i.test(g.body)));
+    assert.ok(greetings.every((g) => g.founderName === 'Prashanth Keransiya'));
+    assert.ok(
+      greetings.every(
+        (g) =>
+          g.body.endsWith('Prashanth Keransiya Family') &&
+          !/wife|own relative|சொந்த உறவினர்/i.test(g.body)
+      )
+    );
     assert.ok(greetings.every((g) => !/Prasanth/i.test(g.body)));
 
     const sampleAlert = {
@@ -2012,23 +2020,23 @@ async function main() {
     assert.equal(leaveJson.participants.some((p) => p.uid === 'student_leave_1'), false);
   });
 
-  await runCase('End-to-End Parity: Automated Greetings (Prashanth keransiya), Locked Light-Blue UI, Camera Menu & Home SOS Geofence', async () => {
+  await runCase('End-to-End Parity: Automated Greetings (Prashanth Keransiya), Locked Light-Blue UI, Camera Menu & Home SOS Geofence', async () => {
     for (const festivalTitle of ['Birthday 🎂', 'Christmas 🎄', 'National Independence Day 🕊️', 'Global New Year 🎆']) {
       const greetRes = await fetch(`${baseUrl}/api/greetings/ai-auto`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           festivalTitle,
-          languageCode: 'ta',
-          languageName: 'Tamil',
+          languageCode: 'en',
+          languageName: 'English',
           recipientName: 'Arun',
         }),
       });
       assert.equal(greetRes.status, 200);
       const greetJson = (await greetRes.json()) as { greetingText: string };
-      assert.equal(/பிரசாந்த்\s+கிரன்சியா|பிரசாத்\s+கிரன்சியா|Prasanth|பிகேஜெட்|பார்டர்|wife/i.test(greetJson.greetingText), false);
-      assert.ok(greetJson.greetingText.includes('Prashanth keransiya'));
-      assert.ok(/ஒற்றுமை|அமைதி|மகிழ்ச்சி|unity|peace|happiness/i.test(greetJson.greetingText));
+      assert.equal(/பிரசாந்த்\s+கிரன்சியா|பிரசாத்\s+கிரன்சியா|Prasanth|பிகேஜெட்|பார்டர்|wife|own relative|சொந்த உறவினர்/i.test(greetJson.greetingText), false);
+      assert.ok(greetJson.greetingText.includes('Prashanth Keransiya Family'));
+      assert.ok(/peace|happiness|blessing/i.test(greetJson.greetingText));
     }
 
     const navSrc = fs.readFileSync(path.join(process.cwd(), 'src/components/ScreenNavigator.tsx'), 'utf8');
@@ -2044,9 +2052,9 @@ async function main() {
 
     const settingsSrc = fs.readFileSync(path.join(process.cwd(), 'src/components/SettingsAndBillingView.tsx'), 'utf8');
     const chatSrc = fs.readFileSync(path.join(process.cwd(), 'src/components/ChatWorkspace.tsx'), 'utf8');
-    assert.ok(settingsSrc.includes('Prashanth keransiya'));
+    assert.ok(settingsSrc.includes('Prashanth Keransiya'));
     assert.equal(/wife/i.test(settingsSrc), false);
-    assert.ok(chatSrc.includes('PK Chat Official Broadcast · <span translate="no">Prashanth keransiya</span>'));
+    assert.ok(chatSrc.includes('PK Chat Official Broadcast · <span translate="no">Prashanth Keransiya</span>'));
     assert.equal(/wife/i.test(chatSrc), false);
     assert.ok(settingsSrc.includes('Light-Blue Frosted Glass (Locked Permanent)'));
     assert.equal(/Prasanth keransiya/i.test(settingsSrc), false);
@@ -2207,9 +2215,10 @@ async function main() {
     const inboxEngineSrc = fs.readFileSync(path.join(process.cwd(), 'src/lib/officialInboxEngine.ts'), 'utf8');
     const i18nSrc = fs.readFileSync(path.join(process.cwd(), 'src/lib/i18n.tsx'), 'utf8');
     const constantsSrc = fs.readFileSync(path.join(process.cwd(), 'src/data/constants.ts'), 'utf8');
-    assert.ok(inboxEngineSrc.includes('Prashanth keransiya'));
-    assert.ok(inboxEngineSrc.includes('சொந்த உறவினர்'));
-    assert.ok(i18nSrc.includes("FOUNDER_CANONICAL_NAME = 'Prashanth keransiya'"));
+    assert.ok(inboxEngineSrc.includes('Prashanth Keransiya Family'));
+    assert.equal(inboxEngineSrc.includes('சொந்த உறவினர்'), false);
+    assert.equal(/own relative/i.test(inboxEngineSrc), false);
+    assert.ok(i18nSrc.includes("FOUNDER_CANONICAL_NAME = 'Prashanth Keransiya'"));
     assert.equal(constantsSrc.includes('Prasanth'), false);
     assert.equal(constantsSrc.includes('பிகேஜெட்'), false);
   });
@@ -3201,7 +3210,7 @@ async function main() {
     });
     const loversOfficial = febInbox.find((g) => g.id.startsWith('greeting_lovers-day_'));
     assert.ok(loversOfficial && loversOfficial.activeToday);
-    assert.equal(loversOfficial.founderName, 'Prashanth keransiya');
+    assert.equal(loversOfficial.founderName, 'Prashanth Keransiya');
 
     // 2. Strictly Verified Government Disaster Alerts (Country -> Province/State -> District/City -> Village)
     const alertsPool = [
@@ -3594,22 +3603,27 @@ async function main() {
     assert.ok(blueprintSrc.includes('"/classes/{roomId}"'));
   });
 
-  await runCase('MessengerDisasterAlerts: Tamil/English PK Family Care Alert Messaging, Country/Major Filtering & UI Integration', () => {
+  await runCase('MessengerDisasterAlerts: English-First Safety Care Alert Messaging, Language Switch, Country/Major Filtering & UI Integration', () => {
     assert.ok(TAMIL_AREAS.includes('jaffna'));
     assert.ok(TAMIL_AREAS.includes('tamil nadu'));
     assert.ok(TAMIL_AREAS.includes('nuwara eliya'));
 
-    const jaffnaCare = getPKFamilyCareMessage({ city: 'Jaffna', region: 'Northern Province', country: 'Sri Lanka' });
-    assert.equal(jaffnaCare.language, 'ta');
-    assert.ok(jaffnaCare.headline.includes('PK Chat தரப்பு'));
-    assert.ok(jaffnaCare.subtext.includes('SOS'));
+    // Default English-first for global travelers/users everywhere
+    const jaffnaDefault = getPKFamilyCareMessage({ city: 'Jaffna', region: 'Northern Province', country: 'Sri Lanka' });
+    assert.equal(jaffnaDefault.language, 'en');
+    assert.equal(jaffnaDefault.headline, 'Please take care and stay safe with your family.');
+    assert.equal(jaffnaDefault.signOff, 'With care for your well-being — Prashanth Keransiya');
+    assert.ok(jaffnaDefault.subtext.includes('SOS'));
 
-    const tamilNaduCare = getPKFamilyCareMessage({ city: 'Madurai', region: 'Tamil Nadu', country: 'India' });
-    assert.equal(tamilNaduCare.language, 'ta');
+    // Explicit switch to Tamil inside the alert view
+    const tamilCare = getPKFamilyCareMessage({ city: 'Madurai', region: 'Tamil Nadu', country: 'India', language: 'ta' });
+    assert.equal(tamilCare.language, 'ta');
+    assert.ok(tamilCare.signOff.includes('Prashanth Keransiya'));
 
     const globalCare = getPKFamilyCareMessage({ city: 'London', region: 'Greater London', country: 'United Kingdom' });
     assert.equal(globalCare.language, 'en');
-    assert.ok(globalCare.headline.includes('From PK Chat and on behalf of your family'));
+    assert.equal(globalCare.headline, 'Please take care and stay safe with your family.');
+    assert.equal(globalCare.signOff, 'With care for your well-being — Prashanth Keransiya');
     assert.ok(globalCare.subtext.includes('SOS'));
 
     const sampleAlerts = [
@@ -3658,9 +3672,11 @@ async function main() {
     assert.ok(compSrc.includes('export function MessengerDisasterAlerts'));
     assert.ok(compSrc.includes('export default MessengerDisasterAlerts'));
     assert.ok(compSrc.includes('verifiedOfficial'));
+    assert.ok(compSrc.includes('PK Chat Official 🛡️✓'));
+    assert.ok(compSrc.includes("variant = 'chat_message'"));
     assert.equal(compSrc.includes('& Wife'), false);
-    assert.ok(chatSrc.includes('<MessengerDisasterAlerts'));
-    assert.ok(safetySrc.includes('<MessengerDisasterAlerts'));
+    assert.ok(chatSrc.includes('<MessengerDisasterAlerts variant="chat_message"'));
+    assert.ok(safetySrc.includes('<MessengerDisasterAlerts variant="chat_message"'));
   });
 
   await runCase('PWA GitHub Pages & PWABuilder: public/manifest.json, relative icon-512.png/icon-192.png, index.html & vite.config.ts base /PK-chat/', () => {
@@ -3807,6 +3823,20 @@ async function main() {
     assert.ok(ctxSrc.includes('if (params.allowLocalFallback !== false)'));
     assert.ok(appSrc.includes('Enter PK CHAT Now'));
     assert.ok(appSrc.includes('data-native-launch-screen="true"'));
+
+    // Verify strictly PK Chat branded first-time welcome screen (zero WhatsApp branding) & 3-step onboarding
+    assert.ok(onboardSrc.includes('Welcome to PK Chat'));
+    assert.ok(onboardSrc.includes('Agree and Continue'));
+    assert.equal(/whatsapp/i.test(onboardSrc), false, 'OnboardingFlow must not contain WhatsApp branding');
+    assert.ok(ctxSrc.includes('pk_onboarding_3step_active'));
+
+    // Verify Profile screen Photo (Camera/Gallery/Remove) & Date of Birth (Save + Change/Edit)
+    const settingsSrc = fs.readFileSync(path.join(process.cwd(), 'src/components/SettingsAndBillingView.tsx'), 'utf8');
+    assert.ok(settingsSrc.includes('Save Date of Birth'));
+    assert.ok(settingsSrc.includes('Change / Edit'));
+    assert.ok(settingsSrc.includes('handleSaveProfileDob'));
+    assert.ok(settingsSrc.includes('handleQuickGalleryAvatarPick'));
+    assert.ok(settingsSrc.includes('pkchat-dob-updated'));
   });
 
   const passedCount = results.filter((r) => r.passed).length;

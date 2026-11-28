@@ -734,7 +734,7 @@ async function startServer() {
       return;
     }
     res.json({
-      creator: 'Prashanth keransiya',
+      creator: 'Prashanth Keransiya',
       authorityLevel: 'ROOT_MASTER_ADMIN',
       ownerEmail: authCheck.email,
       masterKeyConfigured: Boolean(process.env.PKCHAT_MASTER_KEY),
@@ -1471,11 +1471,11 @@ async function startServer() {
   });
 
   // 2. Server-Side Real-Time Translation, Entity Preservation & Confidence Guard
-  const FOUNDER_CANONICAL_NAME = 'Prashanth keransiya';
+  const FOUNDER_CANONICAL_NAME = 'Prashanth Keransiya';
   function enforceFounderNameProtection(text: string): string {
     return text
       .replace(/பிரசாந்த்\s+கிரன்சியா|பிரசாத்\s+கிரன்சியா|பிரசாந்த்\s+கெரன்சியா|பிரஷாந்த்\s+கெரன்சியா/g, FOUNDER_CANONICAL_NAME)
-      .replace(/\b(?:Prashan?th|Prasanth)\s+Keransiya\b/gi, FOUNDER_CANONICAL_NAME);
+      .replace(/\b(?:Prashan?th|Prasanth)\s+keransiya\b/gi, FOUNDER_CANONICAL_NAME);
   }
 
   function buildTranslationContextPrompt(params: {
@@ -1717,10 +1717,10 @@ async function startServer() {
       }
 
       const { text: rawJson } = await translateWithModelResilience(
-        `Translate the following UI labels naturally and concisely into ${targetLanguageName || langEntry.name} (${langEntry.code}). Keep keys identical and keep "PK CHAT", "Prashanth keransiya", "SOS", "GPS", "USGS", "NOAA", "NASA", "E2EE" untranslated in exact Latin script.\nItems: ${JSON.stringify(inputEntries)}`,
+        `Translate the following UI labels naturally and concisely into ${targetLanguageName || langEntry.name} (${langEntry.code}). Keep keys identical and keep "PK CHAT", "Prashanth Keransiya", "SOS", "GPS", "USGS", "NOAA", "NASA", "E2EE" untranslated in exact Latin script.\nItems: ${JSON.stringify(inputEntries)}`,
         {
           systemInstruction:
-            'You are a native UI localizer. Return JSON with an array "items" containing { "key": string, "value": string } for every input item. Never translate or transliterate the proper name "Prashanth keransiya".',
+            'You are a native UI localizer. Return JSON with an array "items" containing { "key": string, "value": string } for every input item. Never translate or transliterate the proper name "Prashanth Keransiya".',
           responseMimeType: 'application/json',
           responseSchema: {
             type: Type.OBJECT,
@@ -1872,7 +1872,7 @@ async function startServer() {
         }),
         {
           systemInstruction:
-            'You are PK CHAT high-accuracy universal translation engine supporting all ISO 639 world, regional, minority, and indigenous languages and regional dialects, including romanized Tanglish (Tamil written in Latin script like "Vanakkam! Neengal saptirgala?") and Kanglish/Hinglish/Singlish. Detect the source language, preserve original meaning and conversational context, and translate naturally into the exact requested target language/dialect. Strictly preserve proper names—especially the founder name "Prashanth keransiya"—phone/reference numbers, dates, times, and geographic locations without translating, transliterating, or altering digits or entity spelling. List preserved entities in preservedEntities. Evaluate confidenceScore (0.0 to 1.0) and set confidenceLevel strictly to lowercase "high", "medium", "low", or "uncertain". If speech/text is garbled, incomplete, heavily ambiguous, or contains [unclear], set confidenceScore below 0.65, set clarificationNeeded=true, and provide a helpful clarificationPrompt instead of inventing missing meaning.',
+            'You are PK CHAT high-accuracy universal translation engine supporting all ISO 639 world, regional, minority, and indigenous languages and regional dialects, including romanized Tanglish (Tamil written in Latin script like "Vanakkam! Neengal saptirgala?") and Kanglish/Hinglish/Singlish. Detect the source language, preserve original meaning and conversational context, and translate naturally into the exact requested target language/dialect. Strictly preserve proper names—especially the founder name "Prashanth Keransiya"—phone/reference numbers, dates, times, and geographic locations without translating, transliterating, or altering digits or entity spelling. List preserved entities in preservedEntities. Evaluate confidenceScore (0.0 to 1.0) and set confidenceLevel strictly to lowercase "high", "medium", "low", or "uncertain". If speech/text is garbled, incomplete, heavily ambiguous, or contains [unclear], set confidenceScore below 0.65, set clarificationNeeded=true, and provide a helpful clarificationPrompt instead of inventing missing meaning.',
           responseMimeType: 'application/json',
           responseSchema: {
             type: Type.OBJECT,
@@ -2000,7 +2000,7 @@ async function startServer() {
           config: {
             thinkingConfig: { thinkingLevel },
             systemInstruction:
-              'You are PK CHAT streaming translation engine. Output ONLY JSON matching the schema. Preserve names (never translate or transliterate "Prashanth keransiya"), numbers, dates, locations, and conversational context accurately. Set confidenceLevel to lowercase high, medium, low, or uncertain. Flag low confidence (<0.68) with clarificationNeeded=true rather than guessing meaning.',
+              'You are PK CHAT streaming translation engine. Output ONLY JSON matching the schema. Preserve names (never translate or transliterate "Prashanth Keransiya"), numbers, dates, locations, and conversational context accurately. Set confidenceLevel to lowercase high, medium, low, or uncertain. Flag low confidence (<0.68) with clarificationNeeded=true rather than guessing meaning.',
             responseMimeType: 'application/json',
             responseSchema: streamSchema,
           },
@@ -2099,7 +2099,7 @@ async function startServer() {
         `Translate the following message into each requested target language.\nTargets: ${JSON.stringify(uniqueTargets)}\nMessage:\n${cleanBatchText}`,
         {
           systemInstruction:
-            'Detect the source language once, then produce accurate, natural translations for every target language code requested while preserving names (never translate or transliterate "Prashanth keransiya"), numbers, dates, and locations.',
+            'Detect the source language once, then produce accurate, natural translations for every target language code requested while preserving names (never translate or transliterate "Prashanth Keransiya"), numbers, dates, and locations.',
           responseMimeType: 'application/json',
           responseSchema: {
             type: Type.OBJECT,
@@ -4108,11 +4108,11 @@ async function startServer() {
     const cleanLangCode =
       typeof languageCode === 'string' && languageCode.trim()
         ? languageCode.trim().slice(0, 16)
-        : 'ta';
+        : 'en';
     const cleanLangName =
       typeof languageName === 'string' && languageName.trim()
         ? languageName.trim().slice(0, 64)
-        : 'Tamil';
+        : 'English';
     const cleanRecipient =
       typeof recipientName === 'string' ? recipientName.trim().slice(0, 60) : '';
 
@@ -4120,46 +4120,46 @@ async function startServer() {
       const greetingPrefix = cleanRecipient ? `Dear ${cleanRecipient}, ` : '';
       if (isMidnightNewYear || /new year|புத்தாண்டு/i.test(cleanFestival)) {
         return enforceFounderNameProtection(
-          `${greetingPrefix}🎆🥂✨ எங்கள் சொந்த உறவினரைப் போல அன்புடன் பிரார்த்திக்கிறோம் — உங்கள் குடும்பத்தில் ஒற்றுமை, அமைதி மற்றும் மகிழ்ச்சி பொங்க இனிய புத்தாண்டு நல்வாழ்த்துகள்! Wishing you unity, peace, and happiness from Prashanth keransiya on PK Chat Official!`
+          `${greetingPrefix}🎆🥂✨ Happy New Year! Wishing you and your family bright happiness, good health, and lasting peace with God's abundant blessings throughout the year ahead. — Prashanth Keransiya Family`
         );
       }
       if (/christmas|கிறிஸ்துமஸ்/i.test(cleanFestival)) {
         return enforceFounderNameProtection(
-          `${greetingPrefix}🎄✨ எங்கள் சொந்த உறவினர் போல அன்புடன் பிரார்த்திக்கிறோம் — உங்கள் இல்லத்தில் ஒற்றுமை, அமைதி மற்றும் மகிழ்ச்சி என்றென்றும் நிலைத்திருக்க இனிய கிறிஸ்துமஸ் நல்வாழ்த்துகள்! Praying for unity, peace, and happiness for your family from Prashanth keransiya on PK Chat Official!`
+          `${greetingPrefix}🎄✨ Merry Christmas! May your home be filled with love, joy, happiness, and peace with God's richest blessings this Christmas season. — Prashanth Keransiya Family`
         );
       }
       if (/national|independence|republic|தேசிய|சுதந்திர/i.test(cleanFestival)) {
         return enforceFounderNameProtection(
-          `${greetingPrefix}🕊️🇮🇳🇱🇰 எங்கள் சொந்த உறவினர் போல அன்புடன் பிரார்த்திக்கிறோம் — ஒற்றுமை, அமைதி மற்றும் மகிழ்ச்சி என்றென்றும் ஓங்க இனிய தேசிய தின நல்வாழ்த்துகள்! Warmest wishes of unity, peace, and happiness on ${cleanFestival} from Prashanth keransiya on PK Chat Official.`
+          `${greetingPrefix}🕊️✨ Warm wishes on ${cleanFestival}! May God's blessings bring unity, happiness, and lasting peace to you, your family, and your nation. — Prashanth Keransiya Family`
         );
       }
       if (/taj mahal|தாஜ்மஹால்/i.test(cleanFestival)) {
         return enforceFounderNameProtection(
-          `${greetingPrefix}🏛️❤️✨ அன்பின் நித்திய சின்னமான தாஜ்மஹால் நினைவுச் செய்தி! Eternal love, unity, peace, and cherished happiness from Prashanth keransiya.`
+          `${greetingPrefix}🏛️❤️✨ Wishing you and your family timeless love, happiness, and peace with God's blessings. — Prashanth Keransiya Family`
         );
       }
       if (/birthday|பிறந்தநாள்/i.test(cleanFestival)) {
         return enforceFounderNameProtection(
-          `${greetingPrefix}🎂🎈🎉 எங்கள் சொந்த உறவினரைப் போல அன்புடன் பிரார்த்திக்கிறோம் — உங்கள் குடும்பத்தில் ஒற்றுமை, அமைதி மற்றும் மகிழ்ச்சி பெருக இனிய பிறந்தநாள் நல்வாழ்த்துகள்! Wishing you unity, peace, and warm happiness today — lovingly from Prashanth keransiya on PK Chat Official!`
+          `${greetingPrefix}🎂🎈🎉 Happy Birthday! May God's blessings fill your life and your family with endless happiness, good health, and peace today and always. — Prashanth Keransiya Family`
         );
       }
       if (/anniversary|திருமண/i.test(cleanFestival)) {
         return enforceFounderNameProtection(
-          `${greetingPrefix}💍❤️✨ எங்கள் சொந்த உறவினர் போல மனமார்ந்த பிரார்த்தனைகள் — ஒற்றுமை, அமைதி மற்றும் மகிழ்ச்சியுடன் இனிய திருமண நாள் நல்வாழ்த்துகள்! Wishing many years of unity, peace, and happiness from Prashanth keransiya.`
+          `${greetingPrefix}💍❤️✨ Happy Anniversary! Wishing you and your family many joyful years of love, happiness, and peace with God's blessings. — Prashanth Keransiya Family`
         );
       }
       if (/mother|அன்னையர்/i.test(cleanFestival)) {
         return enforceFounderNameProtection(
-          `${greetingPrefix}👩‍👧‍👦💖🌹 அன்பான அன்னையர் தின நல்வாழ்த்துகள்! Praying for unity, peace, and happiness in your home from Prashanth keransiya.`
+          `${greetingPrefix}👩‍👧‍👦💖🌹 Happy Mother's Day! Wishing you and your family abundant happiness and peace with God's blessings. — Prashanth Keransiya Family`
         );
       }
       if (/father|தந்தை/i.test(cleanFestival)) {
         return enforceFounderNameProtection(
-          `${greetingPrefix}👨‍👧‍👦💙🌟 அன்பான தந்தைமார் தின நல்வாழ்த்துகள்! Praying for unity, peace, and happiness in your family from Prashanth keransiya.`
+          `${greetingPrefix}👨‍👧‍👦💙🌟 Happy Father's Day! Wishing you and your family strength, happiness, and peace with God's blessings. — Prashanth Keransiya Family`
         );
       }
       return enforceFounderNameProtection(
-        `${greetingPrefix}🎉✨ ${cleanFestival} நல்வாழ்த்துகள்! எங்கள் சொந்த உறவினர் போல உங்கள் குடும்பத்திற்கு ஒற்றுமை, அமைதி மற்றும் மகிழ்ச்சி வேண்டி அன்புடன் வாழ்த்துகிறோம் — crafted in ${cleanLangName} (${cleanLangCode}) from Prashanth keransiya on PK Chat Official.`
+        `${greetingPrefix}🎉✨ Warm wishes on ${cleanFestival}! Wishing you and your family lasting happiness and peace with God's abundant blessings. — Prashanth Keransiya Family`
       );
     };
 
@@ -4175,11 +4175,12 @@ async function startServer() {
 
     try {
       const prompt = [
-        `Compose ONE short, warm, loving close-family-relative ("சொந்த உறவினர்") greeting from "PK Chat Official" for "${cleanFestival}", praying for unity, peace, and happiness for the user and their family.`,
+        `Compose ONE short, warm, uplifting greeting from PK Chat for "${cleanFestival}", wishing everyone and their family happiness and peace with God's blessings.`,
+        `Do NOT use phrases like "like our own relative" or "சொந்த உறவினர்".`,
         cleanRecipient ? `Recipient name: ${cleanRecipient}.` : '',
         isMidnightNewYear ? 'It is for a global midnight New Year broadcast at 12:00 AM local time.' : '',
-        `Sign off warmly from "Prashanth keransiya" in exact English Latin script — NEVER translate or transliterate "Prashanth keransiya" into Tamil or any other script.`,
-        `Include heartfelt wording in ${cleanLangName} (${cleanLangCode}) plus a brief English wish, with 2-3 matching celebratory emojis, under 280 characters total. Return ONLY the greeting message text without quotes or markdown.`,
+        `End the greeting with "Prashanth Keransiya Family" in exact English Latin script — NEVER alter or transliterate "Prashanth Keransiya".`,
+        `Write primarily in clear ${cleanLangName} (${cleanLangCode}) with 2-3 matching celebratory emojis, under 280 characters total. Return ONLY the greeting message text without quotes or markdown.`,
       ]
         .filter(Boolean)
         .join('\n');

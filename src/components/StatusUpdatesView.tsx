@@ -38,6 +38,9 @@ import {
 } from '../lib/statusMedia';
 import { formatFileSize, triggerMediaDownload } from '../lib/chatMediaUtils';
 import {
+  MAX_DOC_IMAGE_BYTES,
+  MAX_STATUS_VIDEO_BYTES,
+  MAX_STATUS_VIDEO_SECONDS,
   analyzeImageDataUrlForExplicitContent,
   detectExplicitSexualContent,
   inspectFileWithDeepGuard,
@@ -287,9 +290,12 @@ export function StatusUpdatesView() {
       setStatusError('Selected file appears to be empty.');
       return;
     }
-    if (file.size > 25 * 1024 * 1024) {
+    const maxAllowedBytes = expected === 'video' ? MAX_STATUS_VIDEO_BYTES : MAX_DOC_IMAGE_BYTES;
+    if (file.size > maxAllowedBytes) {
       setStatusError(
-        `File is ${formatFileSize(file.size)}. Maximum supported Status size is 25 MB. Please trim or compress it.`
+        `File is ${formatFileSize(file.size)}. Maximum supported Status ${expected} size is ${
+          expected === 'video' ? '100 MB' : '25 MB'
+        }.`
       );
       return;
     }
@@ -437,11 +443,11 @@ export function StatusUpdatesView() {
       setRecordingSeconds(0);
       recordTimerRef.current = window.setInterval(() => {
         setRecordingSeconds((prev) => {
-          if (prev + 1 >= 60) {
+          if (prev + 1 >= MAX_STATUS_VIDEO_SECONDS) {
             if (recorderRef.current && recorderRef.current.state === 'recording') {
               recorderRef.current.stop();
             }
-            return 60;
+            return MAX_STATUS_VIDEO_SECONDS;
           }
           return prev + 1;
         });
@@ -1192,10 +1198,10 @@ export function StatusUpdatesView() {
                       {recordingVideo ? <Square className="w-3.5 h-3.5" /> : <Video className="w-4 h-4" />}
                       <span>
                         {cameraMode !== 'video'
-                          ? 'Record Video'
+                          ? 'Record Video (up to 3 min)'
                           : recordingVideo
-                            ? `Stop (${recordingSeconds}s / 60s)`
-                            : 'Start Recording'}
+                            ? `Stop (${Math.floor(recordingSeconds / 60)}:${String(recordingSeconds % 60).padStart(2, '0')} / 3:00)`
+                            : 'Start Recording (3 min max)'}
                       </span>
                     </button>
                   </div>
@@ -1205,7 +1211,7 @@ export function StatusUpdatesView() {
                       <video ref={liveVideoRef} autoPlay playsInline muted className="w-full h-full object-cover" />
                       {recordingVideo && (
                         <span className="absolute top-3 left-3 px-2.5 py-1 rounded-full bg-rose-600 text-white text-[11px] font-bold animate-pulse">
-                          REC 0:{String(recordingSeconds).padStart(2, '0')}
+                          REC {Math.floor(recordingSeconds / 60)}:{String(recordingSeconds % 60).padStart(2, '0')}
                         </span>
                       )}
                     </div>

@@ -498,13 +498,13 @@ const AppI18nContext = createContext<AppI18nContextValue>({
   t: (key, fallback) => fallback || BASE_UI_STRINGS[key] || key,
 });
 
-const FOUNDER_CANONICAL_NAME = 'Prashanth keransiya';
+const FOUNDER_CANONICAL_NAME = 'Prashanth Keransiya';
 
 export function enforceCanonicalFounderName(text: string): string {
   if (!text) return text;
   return text
     .replace(/பிரசாந்த்\s+கிரன்சியா|பிரசாத்\s+கிரன்சியா|பிரசாந்த்\s+கெரன்சியா|பிரஷாந்த்\s+கெரன்சியா/g, FOUNDER_CANONICAL_NAME)
-    .replace(/\b(?:Prashan?th|Prasanth)\s+Keransiya\b/gi, FOUNDER_CANONICAL_NAME);
+    .replace(/\b(?:Prashan?th|Prasanth)\s+keransiya\b/gi, FOUNDER_CANONICAL_NAME);
 }
 
 export function AppI18nProvider({
@@ -573,7 +573,10 @@ export function AppI18nProvider({
       }
     });
 
-    if (Object.keys(missingEntries).length === 0) {
+    if (
+      Object.keys(missingEntries).length === 0 ||
+      (typeof window !== 'undefined' && window.location.hostname.endsWith('.github.io'))
+    ) {
       setLoadingPack(false);
       return;
     }

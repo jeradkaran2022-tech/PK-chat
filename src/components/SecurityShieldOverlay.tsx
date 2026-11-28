@@ -1,13 +1,11 @@
 import React, { useEffect, useState } from 'react';
 import { AlertTriangle, CheckCircle2, Lock, ShieldAlert, Timer } from 'lucide-react';
-import { doc, serverTimestamp, setDoc } from 'firebase/firestore';
 import { usePkChat } from '../context/PkChatContext';
-import { db } from '../lib/firebase';
 import { securityShield, SecurityShieldStatus } from '../lib/securityShield';
 
 export function SecurityShieldOverlay() {
   const { userProfile, languagePref, logSecurityEvent } = usePkChat();
-  const preferredLang = languagePref?.primaryLanguage || userProfile?.preferredLanguage || 'ta';
+  const preferredLang = languagePref?.primaryLanguage || userProfile?.preferredLanguage || 'en';
 
   const [shieldStatus, setShieldStatus] = useState<SecurityShieldStatus>(() =>
     securityShield.checkSecurityStatus(preferredLang)
@@ -21,14 +19,15 @@ export function SecurityShieldOverlay() {
     };
     sync();
     const unsub = securityShield.subscribe(sync);
-    const interval = window.setInterval(sync, 1000);
+    // Only tick the countdown timer while an active verified lockdown is actually in progress
+    const interval = shieldStatus.isLocked ? window.setInterval(sync, 1000) : null;
     return () => {
       unsub();
-      window.clearInterval(interval);
+      if (interval !== null) window.clearInterval(interval);
     };
-  }, [preferredLang]);
+  }, [preferredLang, shieldStatus.isLocked]);
 
-  // Anti-Screenshot & Screen-Capture Key Guard (PrintScreen / Ctrl+Shift+S / Cmd+Shift+S)
+  // Optional Anti-Screenshot Key Guard (only when explicitly enabled by user/admin)
   useEffect(() => {
     if (!securityShield.isAntiDebugEnabled()) return;
     let dismissTimer: number | null = null;
@@ -39,7 +38,7 @@ export function SecurityShieldOverlay() {
       if (isPrintScreen || isShiftS) {
         e.preventDefault();
         setScreenshotBlockedNotice(
-          '⚠️ பாதுகாப்பு எச்சரிக்கை: PK Chat செயலியில் ஸ்கிரீன்ஷாட் எடுக்க அனுமதி இல்லை! · Screenshot capture blocked for privacy.'
+          'Security notice: Screenshot capture shortcut is disabled while PK Chat Privacy Shield is enabled.'
         );
         if (userProfile?.uid) {
           void logSecurityEvent(
@@ -59,38 +58,6 @@ export function SecurityShieldOverlay() {
       if (dismissTimer) window.clearTimeout(dismissTimer);
     };
   }, [logSecurityEvent, userProfile?.uid]);
-
-  // Real-time Anti-Debugging / Inspection Guard on resize (top-level window safe check)
-  useEffect(() => {
-    if (shieldStatus.isLocked || !securityShield.isAntiDebugEnabled()) {
-      return;
-    }
-
-    const handleDevToolsCheck = () => {
-      if (securityShield.isDevToolsViewportAnomaly(160)) {
-        const reason = 'வெளிப்படையான ஆய்வு / ஹேக்கிங் முயற்சி கண்டறியப்பட்டுள்ளது.';
-        void securityShield.triggerSecurityLockdown(reason, {
-          onDispatchAlert: async (alertMessage, lockReason) => {
-            const uid = userProfile?.uid;
-            if (uid) {
-              await setDoc(doc(db, 'notifications', `sec_${Date.now()}`), {
-                userId: uid,
-                category: 'security',
-                title: 'PK Chat பாதுகாப்புப் பூட்டு (Anti-Debug)',
-                body: alertMessage.slice(0, 295),
-                read: false,
-                createdAt: serverTimestamp(),
-              });
-              await logSecurityEvent('SECURITY_SHIELD_LOCKDOWN', 'critical', lockReason);
-            }
-          },
-        });
-      }
-    };
-
-    window.addEventListener('resize', handleDevToolsCheck);
-    return () => window.removeEventListener('resize', handleDevToolsCheck);
-  }, [logSecurityEvent, shieldStatus.isLocked, userProfile?.uid]);
 
   if (!shieldStatus.isLocked) {
     if (!screenshotBlockedNotice) return null;

@@ -161,7 +161,7 @@ export function resolveFestivalGreetings(now = new Date()): FestivalGreeting[] {
     list.push({
       id: 'new-year',
       occasion: 'New Year',
-      message: 'Happy New Year! Wishing you joy, peace, and safety.',
+      message: "Happy New Year! Wishing you and your family happiness and peace with God's blessings. — Prashanth Keransiya Family",
       startsOneDayPrior: true,
     });
   }
@@ -169,14 +169,14 @@ export function resolveFestivalGreetings(now = new Date()): FestivalGreeting[] {
     list.push({
       id: 'lovers-day',
       occasion: "Lover's Day",
-      message: "Happy Lover's Day! Sending warm wishes on PK Chat.",
+      message: "Happy Lover's Day! Wishing you and your family joy, love, and peace with God's blessings. — Prashanth Keransiya Family",
     });
   }
   if (month === 3 && day === 8) {
     list.push({
       id: 'womens-day',
       occasion: "Women's Day",
-      message: "Happy Women's Day! Celebrating strength, care, and inspiration.",
+      message: "Happy Women's Day! Wishing you and your family strength, happiness, and peace with God's blessings. — Prashanth Keransiya Family",
     });
   }
   // Mother's Day (Second Sunday of May)
@@ -184,14 +184,14 @@ export function resolveFestivalGreetings(now = new Date()): FestivalGreeting[] {
     list.push({
       id: 'mothers-day',
       occasion: "Mother's Day",
-      message: "Happy Mother's Day! Thank you for your unconditional love.",
+      message: "Happy Mother's Day! Wishing you and your family endless happiness and peace with God's blessings. — Prashanth Keransiya Family",
     });
   }
   if (month === 12 && day === 25) {
     list.push({
       id: 'christmas',
       occasion: 'Christmas',
-      message: 'Merry Christmas! Peace, blessings, and happiness to you and your family.',
+      message: "Merry Christmas! Wishing you and your family happiness and peace with God's blessings. — Prashanth Keransiya Family",
     });
   }
   return list;

@@ -224,9 +224,14 @@ export function SponsoredMarketplaceSection({
         setTotalAds(res.total || 0);
         if (res.config) setPricingConfig(res.config);
       } catch (err) {
-        setFeedError(
-          err instanceof Error ? err.message : 'Unable to load Sponsored Public Status.'
-        );
+        const msg = err instanceof Error ? err.message : '';
+        if (/404|unexpected server response|unable to reach/i.test(msg)) {
+          setPublicAds([]);
+          setTotalAds(0);
+          setTotalPages(1);
+        } else {
+          setFeedError(msg || 'Unable to load Sponsored Public Status.');
+        }
       } finally {
         setLoadingFeed(false);
       }

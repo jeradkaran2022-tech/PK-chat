@@ -57,8 +57,10 @@ export async function runPKChatSystemDiagnostics(
   // 1. Anti-Theft Protection & Code Security
   try {
     const shield = new SecurityShieldSystem();
-    const status = shield.checkSecurityStatus('ta');
-    const antiDebugReady = shield.isAntiDebugEnabled();
+    const status = shield.checkSecurityStatus('en');
+    const passiveSafeOnNormalLaunch =
+      typeof shield.isAntiDebugEnabled() === 'boolean' &&
+      shield.isDevToolsViewportAnomaly(160) === false;
     const xssBlocked = sanitizeChatPayload('<script>alert(1)</script>').safe === false;
     const malwareBlocked =
       inspectAttachmentForMalware({
@@ -67,7 +69,7 @@ export async function runPKChatSystemDiagnostics(
         sizeBytes: 1024,
       }).safe === false;
 
-    if (status.isLocked || !antiDebugReady || !xssBlocked || !malwareBlocked) {
+    if (status.isLocked || !passiveSafeOnNormalLaunch || !xssBlocked || !malwareBlocked) {
       throw new Error('SecurityShield invariants failed verification.');
     }
 

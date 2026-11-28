@@ -124,8 +124,45 @@ export function ScreenNavigator({ children }: { children: React.ReactNode }) {
   const sosProgressTimerRef = useRef<number | null>(null);
   const sosLongTriggeredRef = useRef(false);
   const quickMenuRef = useRef<HTMLDivElement | null>(null);
+  const swipeStartRef = useRef<{ x: number; y: number; time: number } | null>(null);
   const isOnline = useOnlineStatus();
   const { t } = useAppI18n();
+
+  const SWIPEABLE_SCREENS: ScreenId[] = ['chat_list', 'status_updates', 'audio_call', 'class_room'];
+  const handleMainTouchStart = (e: React.TouchEvent<HTMLElement>) => {
+    if (e.touches.length !== 1) return;
+    const target = e.target as HTMLElement | null;
+    if (
+      target?.closest(
+        'input, textarea, select, canvas, [data-no-swipe="true"], .stories-container, .overflow-x-auto'
+      )
+    ) {
+      swipeStartRef.current = null;
+      return;
+    }
+    const touch = e.touches[0];
+    swipeStartRef.current = { x: touch.clientX, y: touch.clientY, time: Date.now() };
+  };
+
+  const handleMainTouchEnd = (e: React.TouchEvent<HTMLElement>) => {
+    const start = swipeStartRef.current;
+    swipeStartRef.current = null;
+    if (!start || e.changedTouches.length !== 1) return;
+    const idx = SWIPEABLE_SCREENS.indexOf(activeScreen);
+    if (idx < 0) return;
+    const touch = e.changedTouches[0];
+    const dx = touch.clientX - start.x;
+    const dy = touch.clientY - start.y;
+    const elapsed = Date.now() - start.time;
+    if (elapsed > 600 || Math.abs(dx) < 72 || Math.abs(dx) < Math.abs(dy) * 1.6) return;
+    if (dx < 0 && idx < SWIPEABLE_SCREENS.length - 1) {
+      setDialPadModeActive(false);
+      setActiveScreen(SWIPEABLE_SCREENS[idx + 1]);
+    } else if (dx > 0 && idx > 0) {
+      setDialPadModeActive(false);
+      setActiveScreen(SWIPEABLE_SCREENS[idx - 1]);
+    }
+  };
   const [lightBrandTheme, setLightBrandThemeState] = useState<LightBrandTheme>(() =>
     getLightBrandTheme()
   );
@@ -802,14 +839,20 @@ export function ScreenNavigator({ children }: { children: React.ReactNode }) {
           </div>
         </aside>
 
-        {/* Active Screen Canvas */}
-        <main className="flex-1 min-w-0 pb-20 lg:pb-8">{children}</main>
+        {/* Active Screen Canvas (supports horizontal swipe to Updates, Calls, and dedicated PK Live Class) */}
+        <main
+          onTouchStart={handleMainTouchStart}
+          onTouchEnd={handleMainTouchEnd}
+          className="flex-1 min-w-0 pb-20 lg:pb-8"
+        >
+          {children}
+        </main>
       </div>
 
-      {/* Mobile Bottom Tab Bar (6 Clean Tabs: Chats | Updates | PK Live Class | Calls | Dial Pad | Settings) */}
+      {/* Mobile Bottom Tab Bar (Natural WhatsApp 5-Tab Proportions: Chats | Updates | Calls | Live Class | Settings) */}
       <nav
         aria-label="Mobile Bottom Navigation"
-        className="lg:hidden fixed bottom-0 left-0 right-0 z-30 h-16 bg-[#dff1ff]/80 dark:bg-[#0b141a]/92 backdrop-blur-2xl border-t border-[#7dd3fc]/75 dark:border-white/10 grid grid-cols-6 items-center px-0.5 shadow-lg"
+        className="lg:hidden fixed bottom-0 left-0 right-0 z-30 h-[66px] bg-[#eaf6ff]/82 dark:bg-[#0b141a]/92 backdrop-blur-2xl border-t border-white/75 dark:border-white/10 grid grid-cols-5 items-center px-1.5 shadow-[0_-6px_24px_rgba(2,132,199,0.12)]"
       >
         {[
           {
@@ -841,24 +884,12 @@ export function ScreenNavigator({ children }: { children: React.ReactNode }) {
             },
           },
           {
-            key: 'pk_live_class',
-            label: 'PK Live Class',
-            icon: PkLiveClassIcon,
-            isLiveClass: true,
-            hasBadge: false,
-            isActive: activeScreen === 'class_room',
-            onSelect: () => {
-              setDialPadModeActive(false);
-              setActiveScreen('class_room');
-            },
-          },
-          {
             key: 'calls',
             label: t('nav.calls', 'Calls'),
             icon: Phone,
             isLiveClass: false,
             hasBadge: false,
-            isActive: (activeScreen === 'audio_call' || activeScreen === 'video_call') && !dialPadModeActive,
+            isActive: activeScreen === 'audio_call' || activeScreen === 'video_call',
             onSelect: () => {
               setDialPadModeActive(false);
               setActiveScreen('audio_call');
@@ -869,19 +900,15 @@ export function ScreenNavigator({ children }: { children: React.ReactNode }) {
             },
           },
           {
-            key: 'dial_pad',
-            label: 'Dial Pad',
-            icon: Grid,
-            isLiveClass: false,
+            key: 'pk_live_class',
+            label: 'Live Class',
+            icon: PkLiveClassIcon,
+            isLiveClass: true,
             hasBadge: false,
-            isActive: (activeScreen === 'audio_call' || activeScreen === 'video_call') && dialPadModeActive,
+            isActive: activeScreen === 'class_room',
             onSelect: () => {
-              setDialPadModeActive(true);
-              setActiveScreen('audio_call');
-              window.setTimeout(
-                () => window.dispatchEvent(new CustomEvent('pkchat-calls-mode', { detail: 'dialer' })),
-                50
-              );
+              setDialPadModeActive(false);
+              setActiveScreen('class_room');
             },
           },
           {
@@ -894,7 +921,11 @@ export function ScreenNavigator({ children }: { children: React.ReactNode }) {
               activeScreen === 'profile' ||
               activeScreen === 'wallpaper_gallery' ||
               activeScreen === 'translation_settings' ||
-              activeScreen === 'privacy_security',
+              activeScreen === 'privacy_security' ||
+              activeScreen === 'app_lock' ||
+              activeScreen === 'subscription' ||
+              activeScreen === 'payment_status' ||
+              activeScreen === 'help_support',
             onSelect: () => {
               setDialPadModeActive(false);
               setActiveScreen('profile');
@@ -907,31 +938,31 @@ export function ScreenNavigator({ children }: { children: React.ReactNode }) {
               key={tab.key}
               type="button"
               onClick={tab.onSelect}
-              className={`relative min-h-[44px] flex flex-col items-center justify-center text-[10px] font-medium transition-colors ${
+              className={`relative min-h-[50px] flex flex-col items-center justify-center text-[11px] font-medium transition-colors ${
                 tab.isLiveClass
-                  ? 'text-[#0284c7] dark:text-[#38bdf8] font-extrabold'
+                  ? 'text-[#0284c7] dark:text-[#38bdf8] font-bold'
                   : tab.isActive
                     ? 'text-[#0284c7] dark:text-[#38bdf8] font-bold'
-                    : 'text-slate-500 dark:text-slate-400 hover:text-slate-800 dark:hover:text-white'
+                    : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
               }`}
             >
               <div
-                className={`px-2.5 py-1 rounded-full transition-all ${
+                className={`px-3.5 py-1 rounded-full transition-all ${
                   tab.isLiveClass
                     ? tab.isActive
-                      ? 'bg-gradient-to-r from-[#0284c7] to-[#00b4d8] text-white shadow-[0_0_14px_rgba(56,189,248,0.75)]'
-                      : 'bg-gradient-to-r from-[#38bdf8]/25 to-[#00f2fe]/30 ring-1 ring-[#38bdf8]/70 text-[#0284c7] dark:text-[#38bdf8]'
+                      ? 'bg-gradient-to-r from-[#0284c7] to-[#00b4d8] text-white shadow-[0_2px_12px_rgba(2,132,199,0.45)]'
+                      : 'bg-sky-100/80 dark:bg-sky-900/40 ring-1 ring-[#38bdf8]/60 text-[#0284c7] dark:text-[#38bdf8]'
                     : tab.isActive
-                      ? 'bg-sky-100 dark:bg-[#0284c7]/25'
+                      ? 'bg-sky-100/90 dark:bg-[#0284c7]/25'
                       : ''
                 }`}
               >
-                <Icon className="w-4 h-4 sm:w-5 sm:h-5" />
+                <Icon className="w-5 h-5" />
               </div>
               {tab.hasBadge && (
-                <span className="absolute top-1 right-3 w-2 h-2 rounded-full bg-[#0284c7] dark:bg-[#38bdf8]" />
+                <span className="absolute top-1.5 right-4 w-2 h-2 rounded-full bg-[#0284c7] dark:bg-[#38bdf8]" />
               )}
-              <span className="mt-0.5 truncate max-w-full px-0.5">{tab.label}</span>
+              <span className="mt-0.5 truncate max-w-full px-0.5 leading-tight">{tab.label}</span>
             </button>
           );
         })}

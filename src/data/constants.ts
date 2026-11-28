@@ -18,7 +18,8 @@ const APP_BASE_URL =
   './';
 
 export const BRAND_LOGO_URL = `${APP_BASE_URL}assets/aistudio/WhatsApp_Image_2026-11-18_at_4.59.42_PM_e151f1c5.jpeg`;
-export const PK_WORLD_PEACE_WALLPAPER_URL = wpWorldPeaceUrl;
+export const PK_DOVE_GLOBE_IMAGE_URL = `${APP_BASE_URL}assets/aistudio/WhatsApp_Image_2026-11-27_at_5.16.20_PM_84498605.jpeg`;
+export const PK_WORLD_PEACE_WALLPAPER_URL = PK_DOVE_GLOBE_IMAGE_URL;
 export { PK_SIGNATURE_WALLPAPER_URL };
 
 export const BUILT_IN_WALLPAPERS: WallpaperItem[] = [
@@ -26,7 +27,7 @@ export const BUILT_IN_WALLPAPERS: WallpaperItem[] = [
     wallpaperId: PK_WORLD_PEACE_WALLPAPER_ID,
     title: 'PK World Peace & Unity',
     category: 'signature',
-    imageUrl: wpWorldPeaceUrl,
+    imageUrl: PK_DOVE_GLOBE_IMAGE_URL || wpWorldPeaceUrl,
     isBuiltIn: true,
     ownerId: 'system',
   },

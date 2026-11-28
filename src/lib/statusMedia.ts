@@ -603,13 +603,13 @@ export async function uploadStatusMedia(params: {
     }
   }
 
-  // Video status (up to 25 MB)
-  const maxBytes = 25 * 1024 * 1024;
+  // Longer Video status support (up to 100 MB, longer than standard 30s/60s status clips)
+  const maxBytes = 100 * 1024 * 1024;
   if (fileOrBlob.size === 0) {
     throw new Error('Selected video file is empty.');
   }
   if (fileOrBlob.size > maxBytes) {
-    throw new Error('Status video exceeds the 25 MB upload limit. Please select or record a shorter clip.');
+    throw new Error('Status video exceeds the 100 MB upload limit. Please select or record a slightly smaller clip.');
   }
   const fileNameHint = fileOrBlob instanceof File ? fileOrBlob.name.toLowerCase() : '';
   const rawMime = (mimeTypeOverride || fileOrBlob.type || '').toLowerCase();

@@ -1,7 +1,9 @@
-import React, { useMemo } from 'react';
-import { AlertTriangle, Clock, Globe, MapPin, ShieldAlert } from 'lucide-react';
+import React, { useMemo, useState } from 'react';
+import { Clock, Globe, Languages, MapPin, ShieldAlert, ShieldCheck } from 'lucide-react';
 import { usePkChat } from '../context/PkChatContext';
 import {
+  DISASTER_ALERT_LANGUAGES,
+  DisasterAlertLanguageCode,
   MessengerDisasterAlertItem,
   PKFamilyCareLocation,
   PKFamilyCareMessage,
@@ -13,10 +15,12 @@ import {
 } from '../lib/messengerDisasterAlerts';
 
 export {
+  DISASTER_ALERT_LANGUAGES,
   TAMIL_AREAS,
   filterRelevantMessengerAlerts,
   getPKFamilyCareMessage,
   mapDisasterAlertToMessengerItem,
+  type DisasterAlertLanguageCode,
   type MessengerDisasterAlertItem,
   type PKFamilyCareLocation,
   type PKFamilyCareMessage,
@@ -26,6 +30,7 @@ export interface MessengerDisasterAlertsProps {
   userLocation?: PKFamilyCareLocation | null;
   alertsOverride?: MessengerDisasterAlertItem[];
   maxVisible?: number;
+  variant?: 'chat_message' | 'card';
   onOpenSos?: () => void;
 }
 
@@ -33,6 +38,7 @@ export function MessengerDisasterAlerts({
   userLocation,
   alertsOverride,
   maxVisible = 3,
+  variant = 'chat_message',
   onOpenSos,
 }: MessengerDisasterAlertsProps) {
   const {
@@ -41,6 +47,9 @@ export function MessengerDisasterAlerts({
     userProfile,
     setActiveScreen,
   } = usePkChat();
+
+  // Always start in clear English for global travelers/users, with instant one-tap language switch inside the message
+  const [alertLang, setAlertLang] = useState<DisasterAlertLanguageCode>('en');
 
   const resolvedLocation: PKFamilyCareLocation = useMemo(
     () => ({
@@ -59,8 +68,10 @@ export function MessengerDisasterAlerts({
         consentedLocation?.country ||
         userProfile?.country ||
         '',
+      language: alertLang,
     }),
     [
+      alertLang,
       consentedLocation?.city,
       consentedLocation?.country,
       consentedLocation?.district,
@@ -74,8 +85,8 @@ export function MessengerDisasterAlerts({
 
   const userCountry = resolvedLocation.country || '';
   const familyCareMsg = useMemo(
-    () => getPKFamilyCareMessage(resolvedLocation),
-    [resolvedLocation]
+    () => getPKFamilyCareMessage({ ...resolvedLocation, language: alertLang }),
+    [alertLang, resolvedLocation]
   );
 
   const relevantAlerts = useMemo(() => {
@@ -97,8 +108,13 @@ export function MessengerDisasterAlerts({
     }
   };
 
+  const bubbleWidthClass =
+    variant === 'chat_message'
+      ? 'max-w-[90%] sm:max-w-[78%]'
+      : 'max-w-2xl';
+
   return (
-    <div className="space-y-2.5">
+    <div className="space-y-2.5" aria-label="PK Chat Official Emergency Alert Messages">
       {relevantAlerts.map((alert) => {
         const isLocalCountry =
           Boolean(userCountry) &&
@@ -106,64 +122,96 @@ export function MessengerDisasterAlerts({
           alert.country.trim().toLowerCase() === userCountry.trim().toLowerCase();
 
         return (
-          <div
-            key={alert.id}
-            className="bg-gradient-to-br from-rose-700 via-red-700 to-rose-800 text-white rounded-2xl p-3.5 shadow-md border border-rose-400/75"
-          >
-            <div className="flex items-start gap-2.5">
-              <AlertTriangle className="w-5 h-5 shrink-0 mt-0.5 text-amber-200" />
-              <div className="min-w-0 flex-1">
-                <div className="flex items-center justify-between gap-2">
-                  <span className="text-[11px] font-bold uppercase tracking-wide bg-black/25 px-2 py-0.5 rounded-md flex items-center gap-1">
+          <div key={alert.id} className="flex items-end gap-2 justify-start">
+            <div
+              aria-hidden="true"
+              className="w-7 h-7 rounded-full bg-gradient-to-br from-[#0284c7] to-[#0072ff] text-white flex items-center justify-center shrink-0 shadow-xs border border-[#bae6fd]"
+            >
+              <ShieldCheck className="w-3.5 h-3.5" />
+            </div>
+
+            <div
+              className={`${bubbleWidthClass} rounded-2xl rounded-tl-sm px-3.5 py-2.5 bg-[#eef8ff]/92 dark:bg-[#1e2c3a]/92 backdrop-blur-xl border border-[#7dd3fc]/80 dark:border-sky-700/60 border-l-4 border-l-rose-500 text-slate-900 dark:text-slate-100 shadow-sm space-y-2`}
+            >
+              {/* Sender Header + Compact Language Switcher */}
+              <div className="flex flex-wrap items-center justify-between gap-2">
+                <div className="flex flex-wrap items-center gap-1.5 min-w-0">
+                  <span className="text-[12px] font-bold text-[#0369a1] dark:text-[#38bdf8]">
+                    PK Chat Official 🛡️✓
+                  </span>
+                  <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-rose-100 dark:bg-rose-950/70 text-rose-700 dark:text-rose-200 border border-rose-200/80 dark:border-rose-800/60 text-[10px] font-bold uppercase tracking-wide">
                     {isLocalCountry ? (
                       <>
-                        <MapPin className="w-3 h-3" />
+                        <MapPin className="w-2.5 h-2.5" />
                         <span>{alert.country} Alert</span>
                       </>
                     ) : (
                       <>
-                        <Globe className="w-3 h-3" />
-                        <span>Major Alert • {alert.country || 'International'}</span>
+                        <Globe className="w-2.5 h-2.5" />
+                        <span>{alert.country || 'International'} Alert</span>
                       </>
                     )}
                   </span>
-
-                  <span className="text-[11px] text-rose-100 flex items-center gap-1 shrink-0">
-                    <Clock className="w-3 h-3" />
-                    <span>{formatMessengerAlertTimeLabel(alert.issuedAt)}</span>
-                  </span>
                 </div>
 
-                <p className="font-bold text-sm mt-1.5 leading-snug">{alert.title}</p>
-                <p className="text-xs text-rose-50 mt-1 leading-relaxed">
+                <label className="inline-flex items-center gap-1 px-2 py-0.5 rounded-lg bg-[#d9efff]/90 dark:bg-slate-800/80 border border-[#7dd3fc]/70 dark:border-slate-700 text-[11px] font-semibold text-[#0369a1] dark:text-[#38bdf8]">
+                  <Languages className="w-3 h-3 shrink-0" />
+                  <select
+                    aria-label="Switch alert language"
+                    value={alertLang}
+                    onChange={(e) => setAlertLang(e.target.value as DisasterAlertLanguageCode)}
+                    className="bg-transparent text-[#0369a1] dark:text-[#38bdf8] text-[11px] font-semibold focus:outline-none cursor-pointer"
+                  >
+                    {DISASTER_ALERT_LANGUAGES.map((lang) => (
+                      <option key={lang.code} value={lang.code} className="text-slate-900 bg-white">
+                        {lang.label}
+                      </option>
+                    ))}
+                  </select>
+                </label>
+              </div>
+
+              {/* English-First Official Country Emergency Alert Message Body */}
+              <div className="space-y-1 text-[13.5px] leading-relaxed">
+                <p className="font-bold text-slate-900 dark:text-white leading-snug">
+                  {alert.title}
+                </p>
+                <p className="text-[13px] text-slate-700 dark:text-slate-200">
                   {alert.description}
                 </p>
+              </div>
 
-                <div className="mt-2.5 bg-black/25 px-3 py-2 rounded-xl border border-white/15 flex flex-col sm:flex-row sm:items-center justify-between gap-2">
-                  <div>
-                    <p className="text-xs font-bold text-amber-200 leading-snug">
-                      {familyCareMsg.headline}
-                    </p>
-                    <p className="text-[11px] text-rose-50 mt-0.5 leading-snug">
-                      {familyCareMsg.subtext}
-                    </p>
-                  </div>
+              {/* Warm Safety Note & Founder Sign-Off (English first, switchable inline) */}
+              <div className="pt-2 border-t border-[#7dd3fc]/50 dark:border-slate-700/70 space-y-1 text-[13px]">
+                <p className="font-semibold text-slate-900 dark:text-white">
+                  {familyCareMsg.headline}
+                </p>
+                <p className="text-[12px] text-slate-600 dark:text-slate-300">
+                  {familyCareMsg.subtext}
+                </p>
+                <p translate="no" className="text-[12px] font-semibold text-[#0369a1] dark:text-[#38bdf8]">
+                  {familyCareMsg.signOff}
+                </p>
+              </div>
+
+              {/* Message Footer: Verified Source, Quick SOS Action & Chat Timestamp */}
+              <div className="flex flex-wrap items-center justify-between gap-2 pt-1 text-[11px] text-slate-500 dark:text-slate-400">
+                <span className="truncate">
+                  ✓ {alert.source || 'Official Authority'} · {alert.region || alert.country || 'Alert Zone'}
+                </span>
+                <div className="flex items-center gap-2 shrink-0 ml-auto">
                   <button
                     type="button"
                     onClick={handleSosAction}
-                    className="px-3 py-1.5 rounded-xl bg-amber-300 hover:bg-amber-200 text-slate-950 text-[11px] font-extrabold inline-flex items-center gap-1 shrink-0 self-start sm:self-center shadow-sm"
+                    className="min-h-[28px] px-2.5 py-0.5 rounded-lg bg-rose-600 hover:bg-rose-700 text-white text-[11px] font-bold inline-flex items-center gap-1 shadow-xs"
                   >
-                    <ShieldAlert className="w-3.5 h-3.5" />
+                    <ShieldAlert className="w-3 h-3" />
                     <span>SOS</span>
                   </button>
-                </div>
-
-                <div className="flex items-center justify-between gap-2 text-[11px] text-rose-100 mt-2 pt-2 border-t border-white/20">
-                  <span className="truncate">
-                    {alert.region || alert.country || 'Alert Zone'}
-                  </span>
-                  <span className="font-semibold truncate">
-                    ✓ {alert.source || 'Official Authority'}
+                  <span className="inline-flex items-center gap-1 tabular-nums">
+                    <Clock className="w-3 h-3" />
+                    <span>{formatMessengerAlertTimeLabel(alert.issuedAt)}</span>
+                    <span className="text-[#0284c7] dark:text-[#38bdf8] font-bold">✓✓</span>
                   </span>
                 </div>
               </div>

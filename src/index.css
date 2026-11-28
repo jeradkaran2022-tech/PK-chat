@@ -17,12 +17,14 @@
   body {
     font-family: var(--font-sans);
     letter-spacing: -0.005em;
+    -webkit-font-smoothing: antialiased;
+    text-rendering: optimizeLegibility;
     background-color: #d7efff;
     background-image:
-      radial-gradient(circle at 12% 14%, rgba(125, 211, 252, 0.55) 0%, transparent 46%),
-      radial-gradient(circle at 86% 18%, rgba(56, 189, 248, 0.38) 0%, transparent 48%),
-      radial-gradient(circle at 52% 88%, rgba(14, 165, 233, 0.25) 0%, transparent 55%),
-      linear-gradient(155deg, #dff3ff 0%, #cceaff 48%, #e4f5ff 100%);
+      radial-gradient(circle at 12% 10%, rgba(125, 211, 252, 0.58) 0%, transparent 48%),
+      radial-gradient(circle at 88% 16%, rgba(56, 189, 248, 0.4) 0%, transparent 48%),
+      radial-gradient(circle at 50% 88%, rgba(14, 165, 233, 0.24) 0%, transparent 56%),
+      linear-gradient(155deg, #e5f5ff 0%, #cdeaff 48%, #e8f7ff 100%);
     background-attachment: fixed;
   }
 
@@ -41,6 +43,70 @@
   }
 }
 
+.pk-glass {
+  background: rgba(235, 247, 255, 0.62);
+  backdrop-filter: blur(16px) saturate(145%);
+  -webkit-backdrop-filter: blur(16px) saturate(145%);
+  border: 1px solid rgba(255, 255, 255, 0.62);
+  box-shadow: 0 8px 28px rgba(2, 132, 199, 0.11), inset 0 1px 0 rgba(255, 255, 255, 0.72);
+}
+
+.dark .pk-glass {
+  background: rgba(15, 23, 42, 0.66);
+  border: 1px solid rgba(56, 189, 248, 0.22);
+  box-shadow: 0 8px 28px rgba(0, 0, 0, 0.35), inset 0 1px 0 rgba(255, 255, 255, 0.08);
+}
+
+.pk-glass-marble {
+  background:
+    radial-gradient(circle at 18% 15%, rgba(255, 255, 255, 0.42) 0%, transparent 45%),
+    radial-gradient(circle at 82% 85%, rgba(125, 211, 252, 0.34) 0%, transparent 52%),
+    linear-gradient(135deg, rgba(226, 245, 255, 0.56) 0%, rgba(196, 233, 255, 0.44) 50%, rgba(235, 248, 255, 0.58) 100%);
+  backdrop-filter: blur(10px) saturate(155%);
+  -webkit-backdrop-filter: blur(10px) saturate(155%);
+  border: 1.5px solid rgba(255, 255, 255, 0.72);
+  box-shadow:
+    0 14px 36px rgba(2, 132, 199, 0.22),
+    inset 0 2px 3px rgba(255, 255, 255, 0.8),
+    inset 0 -4px 10px rgba(14, 165, 233, 0.16);
+}
+
+.pk-marble-key {
+  background:
+    radial-gradient(circle at 30% 24%, rgba(255, 255, 255, 0.82) 0%, rgba(224, 244, 255, 0.52) 56%, rgba(186, 230, 253, 0.44) 100%);
+  backdrop-filter: blur(8px) saturate(140%);
+  -webkit-backdrop-filter: blur(8px) saturate(140%);
+  border: 1px solid rgba(255, 255, 255, 0.78);
+  box-shadow:
+    0 6px 16px rgba(2, 132, 199, 0.16),
+    inset 0 2px 3px rgba(255, 255, 255, 0.88),
+    inset 0 -3px 6px rgba(2, 132, 199, 0.14);
+}
+
+.pk-marble-key:active {
+  transform: scale(0.94);
+  box-shadow:
+    0 2px 8px rgba(2, 132, 199, 0.18),
+    inset 0 2px 6px rgba(2, 132, 199, 0.2);
+}
+
+@keyframes pk-emoji-pop {
+  0%, 100% {
+    transform: translateY(0) scale(1);
+  }
+  45% {
+    transform: translateY(-4px) scale(1.16) rotate(-4deg);
+  }
+  70% {
+    transform: translateY(-1px) scale(1.08) rotate(3deg);
+  }
+}
+
+.animate-pk-emoji-pop {
+  display: inline-block;
+  animation: pk-emoji-pop 1.9s ease-in-out infinite;
+}
+
 @media (display-mode: standalone) {
   body {
     padding-top: env(safe-area-inset-top);
@@ -54,7 +120,7 @@
   letter-spacing: 0.01em;
   background-color: #020617;
   background-image:
-    radial-gradient(ellipse at top, rgba(0, 198, 255, 0.16), rgba(10, 25, 47, 0.94) 48%, #020617 100%);
+    radial-gradient(ellipse at top, rgba(0, 198, 255, 0.18), rgba(10, 25, 47, 0.94) 48%, #020617 100%);
 }
 
 @keyframes pk-firework {

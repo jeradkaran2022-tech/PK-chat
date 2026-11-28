@@ -12,11 +12,13 @@ import {
   Fingerprint,
   Globe,
   HelpCircle,
+  Image as ImageIcon,
   KeyRound,
   Languages,
   Lock,
   LogOut,
   Palette,
+  Pencil,
   PhoneCall,
   QrCode,
   RefreshCw,
@@ -262,6 +264,9 @@ export function SettingsAndBillingView() {
     profileMedia?.aboutVisibility || userProfile?.aboutVisibility || 'everyone'
   );
   const [photoEditorMode, setPhotoEditorMode] = useState<'avatar' | 'cover' | null>(null);
+  const [photoEditorInitialAction, setPhotoEditorInitialAction] = useState<'camera' | 'gallery' | null>(null);
+  const [galleryDraftAvatar, setGalleryDraftAvatar] = useState<string | null>(null);
+  const quickGalleryInputRef = useRef<HTMLInputElement | null>(null);
   const [qrModalTab, setQrModalTab] = useState<QrModalInitialTab | null>(null);
   const [profileSaved, setProfileSaved] = useState(false);
   const [profileError, setProfileError] = useState<string | null>(null);
@@ -334,6 +339,63 @@ export function SettingsAndBillingView() {
       return false;
     }
   });
+  const [dobDraft, setDobDraft] = useState<string>(() => {
+    try {
+      return window.localStorage.getItem('pk_user_dob') || '2000-01-01';
+    } catch {
+      return '2000-01-01';
+    }
+  });
+  const [isEditingDob, setIsEditingDob] = useState<boolean>(() => {
+    try {
+      return window.localStorage.getItem('pk_user_dob_confirmed') !== 'true';
+    } catch {
+      return true;
+    }
+  });
+  const [dobSaveToast, setDobSaveToast] = useState<string | null>(null);
+
+  const handleSaveProfileDob = (targetDob: string) => {
+    const cleaned = targetDob.trim();
+    if (!cleaned) return;
+    setProfileDob(cleaned);
+    setDobDraft(cleaned);
+    setDobConfirmed(true);
+    setIsEditingDob(false);
+    setDobSaveToast('Date of Birth saved! Birthday greetings will use this date.');
+    window.setTimeout(() => setDobSaveToast(null), 3500);
+    try {
+      window.localStorage.setItem('pk_user_dob', cleaned);
+      window.localStorage.setItem('pk_user_dob_confirmed', 'true');
+      const parsed = new Date(cleaned);
+      const now = new Date();
+      let age = now.getFullYear() - parsed.getFullYear();
+      const mDiff = now.getMonth() - parsed.getMonth();
+      if (mDiff < 0 || (mDiff === 0 && now.getDate() < parsed.getDate())) age -= 1;
+      window.localStorage.setItem(
+        'pk_minor_safety_mode',
+        !Number.isNaN(age) && age < 18 ? 'true' : 'false'
+      );
+      window.dispatchEvent(new CustomEvent('pkchat-dob-updated'));
+    } catch {
+      // ignore storage errors
+    }
+  };
+
+  const handleQuickGalleryAvatarPick = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    e.target.value = '';
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = () => {
+      if (typeof reader.result === 'string') {
+        setGalleryDraftAvatar(reader.result);
+        setPhotoEditorInitialAction('gallery');
+        setPhotoEditorMode('avatar');
+      }
+    };
+    reader.readAsDataURL(file);
+  };
   const [masterSoundEnabled, setMasterSoundEnabledState] = useState<boolean>(() =>
     isMasterSoundEnabled()
   );
@@ -548,23 +610,24 @@ export function SettingsAndBillingView() {
     }
   }, [emergencyContacts]);
 
-  const activeSettingsWallpaperUrl =
-    userSettings?.customWallpaperData ||
-    wallpapers.find((w) => w.wallpaperId === userSettings?.wallpaperId)?.imageUrl ||
-    PK_WORLD_PEACE_WALLPAPER_URL;
+  const activeSettingsWallpaperUrl = PK_WORLD_PEACE_WALLPAPER_URL;
 
+  // Settings & Sub-Pages Shell: clearly shows dove-and-globe artwork (1000028002.png) scaled to mobile dimensions without white blocking
   const renderSettingsShell = (children: React.ReactNode) => (
-    <div className="relative min-h-full overflow-hidden bg-gradient-to-br from-[#d2ebff] via-[#e4f5ff] to-[#b9e2ff] dark:from-[#0b141a] dark:via-slate-950 dark:to-slate-900">
+    <div className="relative min-h-full overflow-hidden bg-[#d7efff] dark:from-[#0b141a] dark:via-slate-950 dark:to-slate-900">
       <div
         aria-hidden="true"
-        className="pointer-events-none select-none fixed inset-0 z-0 flex items-center justify-center overflow-hidden opacity-25 dark:opacity-15"
+        className="pointer-events-none select-none fixed inset-0 z-0 flex items-center justify-center overflow-hidden"
       >
         <img
           src={activeSettingsWallpaperUrl}
           alt=""
-          className="w-full h-full object-contain object-center"
+          loading="eager"
+          decoding="async"
+          className="w-full h-full object-cover object-center opacity-75 dark:opacity-35"
           referrerPolicy="no-referrer"
         />
+        <div className="absolute inset-0 bg-gradient-to-b from-[#d7efff]/26 via-[#dff1ff]/18 to-[#d7efff]/32 dark:from-slate-950/70 dark:via-slate-950/60 dark:to-slate-950/75" />
       </div>
       <div className="relative z-10">{children}</div>
     </div>
@@ -582,7 +645,7 @@ export function SettingsAndBillingView() {
       );
     });
 
-    return (
+    return renderSettingsShell(
       <div className="p-4 lg:p-8 space-y-6">
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-slate-200 dark:border-slate-800 pb-5">
           <div>
@@ -1098,7 +1161,7 @@ export function SettingsAndBillingView() {
       phoneNumber: userAccount?.phoneNumber || auth.currentUser?.phoneNumber,
       subscription,
     });
-    return (
+    return renderSettingsShell(
       <BillingAndUserModeSection
         isPaymentTab={isPaymentTab}
         entitlement={entitlement}
@@ -1166,7 +1229,7 @@ export function SettingsAndBillingView() {
     };
 
     return renderSettingsShell(
-      <div className="p-4 lg:p-8 max-w-4xl space-y-6">
+      <div className="p-4 sm:p-5 lg:p-8 max-w-4xl space-y-6">
         <div className="flex flex-wrap items-center justify-between gap-3">
           <div>
             <h1 className="text-2xl font-bold text-slate-900 dark:text-white">
@@ -1198,43 +1261,39 @@ export function SettingsAndBillingView() {
           >
             <div className="space-y-1">
               <p className="font-bold">
-                ⚠️ PK Chat நினைவூட்டல்: தயவுசெய்து உங்களுடைய பிறந்த தேதியைச் (DOB) சரிசெய்து கொள்ளுங்கள் (விருப்பத்திற்கேற்ப).
+                PK Chat Reminder: Save your Date of Birth (DOB) below to personalize automated birthday greetings.
               </p>
               <p className="opacity-85">
-                Confirm your Date of Birth below to personalize birthday greetings and age safety controls.
+                You can change or update your Date of Birth anytime later from your Profile screen.
               </p>
             </div>
             <div className="flex items-center gap-2 shrink-0">
               <button
                 type="button"
-                onClick={() =>
-                  document
-                    .getElementById('profile-dob-input')
-                    ?.scrollIntoView({ behavior: 'smooth', block: 'center' })
-                }
+                onClick={() => {
+                  setIsEditingDob(true);
+                  window.setTimeout(() => {
+                    document
+                      .getElementById('profile-dob-input')
+                      ?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                  }, 50);
+                }}
                 className="min-h-[38px] px-3 py-1.5 rounded-xl bg-[#eef8ff]/90 dark:bg-slate-900 border border-amber-300 dark:border-amber-700 font-semibold text-amber-900 dark:text-amber-200"
               >
                 Edit DOB
               </button>
               <button
                 type="button"
-                onClick={() => {
-                  setDobConfirmed(true);
-                  try {
-                    window.localStorage.setItem('pk_user_dob_confirmed', 'true');
-                  } catch {
-                    // ignore
-                  }
-                }}
+                onClick={() => handleSaveProfileDob(dobDraft || profileDob)}
                 className="min-h-[38px] px-3 py-1.5 rounded-xl bg-[#0284c7] hover:bg-[#0369a1] text-white font-bold"
               >
-                Confirm DOB ✓
+                Save DOB ✓
               </button>
             </div>
           </div>
         )}
 
-        <div className="bg-[#e3f3ff]/80 dark:bg-slate-900 backdrop-blur-2xl border border-[#7dd3fc]/75 dark:border-slate-800 rounded-3xl overflow-hidden shadow-[0_12px_36px_rgba(2,132,199,0.14)]">
+        <div className="bg-[#e3f3ff]/58 dark:bg-slate-900/75 backdrop-blur-md border border-white/65 dark:border-slate-800 rounded-3xl overflow-hidden shadow-[0_12px_36px_rgba(2,132,199,0.14)]">
           {/* Profile Cover Banner (Light Blue WhatsApp) */}
           <div className="relative h-44 sm:h-52 bg-gradient-to-r from-[#0284c7] via-[#0369a1] to-sky-700">
             {currentCover && (
@@ -1281,6 +1340,19 @@ export function SettingsAndBillingView() {
                     name={userProfile?.fullName || 'PK CHAT User'}
                     size="xl"
                   />
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setGalleryDraftAvatar(null);
+                      setPhotoEditorInitialAction('camera');
+                      setPhotoEditorMode('avatar');
+                    }}
+                    title="Change Profile Photo with Camera"
+                    aria-label="Change Profile Photo with Camera"
+                    className="absolute -bottom-1 -right-1 w-9 h-9 rounded-full bg-[#0284c7] hover:bg-[#0369a1] text-white border-2 border-white shadow-md flex items-center justify-center transition-colors"
+                  >
+                    <Camera className="w-4 h-4" />
+                  </button>
                 </div>
                 <div className="pb-1">
                   <h2 className="text-lg font-bold text-slate-900 dark:text-white">
@@ -1298,6 +1370,48 @@ export function SettingsAndBillingView() {
               </div>
 
               <div className="flex flex-wrap gap-2">
+                <input
+                  ref={quickGalleryInputRef}
+                  type="file"
+                  accept="image/jpeg,image/png,image/webp"
+                  onChange={handleQuickGalleryAvatarPick}
+                  className="hidden"
+                />
+                <button
+                  type="button"
+                  onClick={() => {
+                    setGalleryDraftAvatar(null);
+                    setPhotoEditorInitialAction('camera');
+                    setPhotoEditorMode('avatar');
+                  }}
+                  className="px-3.5 py-2 rounded-xl bg-[#0284c7] hover:bg-[#0369a1] text-white text-xs font-semibold flex items-center gap-1.5 shadow-sm"
+                >
+                  <Camera className="w-3.5 h-3.5" />
+                  <span>Camera</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => quickGalleryInputRef.current?.click()}
+                  className="px-3.5 py-2 rounded-xl bg-[#eef8ff]/90 border border-[#7dd3fc]/80 hover:border-[#0284c7] text-[#0369a1] text-xs font-semibold flex items-center gap-1.5 shadow-xs"
+                >
+                  <ImageIcon className="w-3.5 h-3.5" />
+                  <span>Gallery</span>
+                </button>
+                {currentAvatar && (
+                  <button
+                    type="button"
+                    onClick={() =>
+                      saveProfileCustomization({ avatarDataUrl: '', avatarMimeType: '' }).catch(
+                        (e) =>
+                          setProfileError(e instanceof Error ? e.message : 'Unable to remove photo')
+                      )
+                    }
+                    className="px-3 py-2 rounded-xl bg-rose-50/90 border border-rose-300 dark:border-rose-800 hover:bg-rose-100 text-rose-600 text-xs font-semibold flex items-center gap-1"
+                  >
+                    <Trash2 className="w-3.5 h-3.5" />
+                    <span>Remove</span>
+                  </button>
+                )}
                 <button
                   type="button"
                   onClick={() => setQrModalTab('my_code')}
@@ -1318,34 +1432,11 @@ export function SettingsAndBillingView() {
                   <QrCode className="w-4 h-4" />
                   <span>Scan QR</span>
                 </button>
-                <button
-                  type="button"
-                  onClick={() => setPhotoEditorMode('avatar')}
-                  className="px-3.5 py-2 rounded-xl bg-[#0284c7] hover:bg-[#0369a1] text-white text-xs font-semibold flex items-center gap-1.5"
-                >
-                  <Camera className="w-3.5 h-3.5" />
-                  <span>{currentAvatar ? 'Change / Crop Photo' : 'Add Profile Photo'}</span>
-                </button>
-                {currentAvatar && (
-                  <button
-                    type="button"
-                    onClick={() =>
-                      saveProfileCustomization({ avatarDataUrl: '', avatarMimeType: '' }).catch(
-                        (e) =>
-                          setProfileError(e instanceof Error ? e.message : 'Unable to remove photo')
-                      )
-                    }
-                    className="px-3 py-2 rounded-xl border border-rose-300 dark:border-rose-800 text-rose-600 text-xs font-semibold flex items-center gap-1"
-                  >
-                    <Trash2 className="w-3.5 h-3.5" />
-                    <span>Remove Photo</span>
-                  </button>
-                )}
               </div>
             </div>
 
-            {/* Official Verified User Summary & Editable Date of Birth */}
-            <div className="rounded-2xl bg-[#f0f9ff] dark:bg-slate-950 border border-[#bae6fd] dark:border-slate-800 p-4 grid sm:grid-cols-2 lg:grid-cols-4 gap-4 items-center text-xs">
+            {/* Official Verified User Summary & Editable Date of Birth (Save & Change Anytime) */}
+            <div className="rounded-2xl bg-[#f0f9ff]/90 dark:bg-slate-950 border border-[#bae6fd] dark:border-slate-800 p-4 grid sm:grid-cols-2 lg:grid-cols-4 gap-4 items-start text-xs">
               <div className="space-y-1">
                 <p className="text-[11px] font-semibold text-[#0369a1] dark:text-[#33b3ff]">
                   🪪 Account Type
@@ -1362,38 +1453,77 @@ export function SettingsAndBillingView() {
                   {userAccount?.phoneNumber || 'Not linked'}
                 </p>
               </div>
-              <div className="space-y-1">
+              <div className="space-y-1.5 sm:col-span-2 lg:col-span-1">
                 <label htmlFor="profile-dob-input" className="block text-[11px] font-semibold text-[#0369a1] dark:text-[#33b3ff]">
                   🎂 Date of Birth (DOB)
                 </label>
-                <input
-                  id="profile-dob-input"
-                  type="date"
-                  value={profileDob}
-                  max={new Date().toISOString().split('T')[0]}
-                  onChange={(e) => {
-                    const nextDob = e.target.value;
-                    setProfileDob(nextDob);
-                    setDobConfirmed(true);
-                    try {
-                      window.localStorage.setItem('pk_user_dob', nextDob);
-                      window.localStorage.setItem('pk_user_dob_confirmed', 'true');
-                      const parsed = new Date(nextDob);
-                      const now = new Date();
-                      let age = now.getFullYear() - parsed.getFullYear();
-                      const mDiff = now.getMonth() - parsed.getMonth();
-                      if (mDiff < 0 || (mDiff === 0 && now.getDate() < parsed.getDate())) age -= 1;
-                      window.localStorage.setItem(
-                        'pk_minor_safety_mode',
-                        !Number.isNaN(age) && age < 18 ? 'true' : 'false'
-                      );
-                      window.dispatchEvent(new CustomEvent('pkchat-dob-updated'));
-                    } catch {
-                      // ignore storage errors
-                    }
-                  }}
-                  className="w-full h-9 px-2.5 rounded-lg bg-[#eef8ff]/90 dark:bg-slate-900 border border-[#7dd3fc]/75 dark:border-slate-800 text-xs font-mono text-slate-900 dark:text-white"
-                />
+                {isEditingDob || !dobConfirmed ? (
+                  <div className="space-y-2">
+                    <input
+                      id="profile-dob-input"
+                      type="date"
+                      value={dobDraft}
+                      max={new Date().toISOString().split('T')[0]}
+                      onChange={(e) => setDobDraft(e.target.value)}
+                      className="w-full h-9 px-2.5 rounded-lg bg-[#eef8ff]/95 dark:bg-slate-900 border border-[#7dd3fc] dark:border-slate-800 text-xs font-mono text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-[#0284c7]"
+                    />
+                    <div className="flex items-center gap-1.5">
+                      <button
+                        type="button"
+                        id="save-dob-btn"
+                        disabled={!dobDraft}
+                        onClick={() => handleSaveProfileDob(dobDraft)}
+                        className="flex-1 min-h-[34px] px-2.5 py-1.5 rounded-lg bg-[#0284c7] hover:bg-[#0369a1] disabled:opacity-50 text-white text-[11px] font-bold flex items-center justify-center gap-1"
+                      >
+                        <Check className="w-3.5 h-3.5" />
+                        <span>Save Date of Birth</span>
+                      </button>
+                      {dobConfirmed && (
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setDobDraft(profileDob);
+                            setIsEditingDob(false);
+                          }}
+                          className="min-h-[34px] px-2.5 py-1.5 rounded-lg bg-white/80 border border-[#7dd3fc] text-slate-700 text-[11px] font-semibold"
+                        >
+                          Cancel
+                        </button>
+                      )}
+                    </div>
+                  </div>
+                ) : (
+                  <div className="space-y-1.5">
+                    <div className="flex items-center justify-between gap-2">
+                      <span
+                        id="profile-dob-display"
+                        className="font-mono font-semibold text-slate-900 dark:text-white"
+                      >
+                        {profileDob}
+                      </span>
+                      <button
+                        type="button"
+                        id="change-dob-btn"
+                        onClick={() => {
+                          setDobDraft(profileDob);
+                          setIsEditingDob(true);
+                        }}
+                        className="px-2.5 py-1 rounded-lg bg-[#dff1ff] hover:bg-[#bae6fd] border border-[#7dd3fc] text-[#0369a1] text-[11px] font-bold flex items-center gap-1"
+                      >
+                        <Pencil className="w-3 h-3" />
+                        <span>Change / Edit</span>
+                      </button>
+                    </div>
+                    <p className="text-[10px] text-[#0369a1]">
+                      Automated PK Chat birthday greetings active
+                    </p>
+                  </div>
+                )}
+                {dobSaveToast && (
+                  <p className="text-[11px] font-semibold text-[#0369a1] bg-sky-50 border border-[#7dd3fc] rounded-lg px-2 py-1">
+                    {dobSaveToast}
+                  </p>
+                )}
               </div>
               <div className="space-y-1">
                 <p className="text-[11px] font-semibold text-[#0369a1] dark:text-[#33b3ff]">
@@ -1475,27 +1605,27 @@ export function SettingsAndBillingView() {
                   key={row.label}
                   type="button"
                   onClick={row.action}
-                  className="w-full min-h-[44px] px-4 py-3 flex items-center justify-between text-left font-medium text-slate-800 dark:text-slate-200 hover:bg-[#e0f2fe]/60 dark:hover:bg-slate-900 transition-colors"
+                  className="w-full min-h-[54px] px-4 py-3.5 flex items-center justify-between text-left text-[15px] font-medium text-slate-800 dark:text-slate-100 hover:bg-[#e0f2fe]/60 dark:hover:bg-slate-900 transition-colors"
                 >
                   <span>{row.label}</span>
-                  <span className="text-[#0284c7] dark:text-[#33b3ff] text-base leading-none">›</span>
+                  <span className="text-[#0284c7] dark:text-[#33b3ff] text-lg leading-none">›</span>
                 </button>
               ))}
             </div>
 
             {/* Founder Attribution (Strictly English) */}
-            <div className="p-4 rounded-2xl bg-[#f0f9ff] border border-[#bae6fd] flex flex-wrap items-center justify-between gap-2 text-xs">
+            <div className="p-4 rounded-2xl pk-glass flex flex-wrap items-center justify-between gap-2 text-xs">
               <div>
-                <p className="font-bold text-[#0369a1]">PK CHAT Founder Credits</p>
-                <p className="text-slate-600 mt-0.5">
+                <p className="font-bold text-[#0369a1] dark:text-[#38bdf8]">PK CHAT Founder Credits</p>
+                <p className="text-slate-600 dark:text-slate-300 mt-0.5">
                   Created &amp; lovingly dedicated to global peace &amp; families by{' '}
-                  <span translate="no" className="font-bold text-[#0284c7]">
-                    Prashanth keransiya
+                  <span translate="no" className="font-bold text-[#0284c7] dark:text-[#38bdf8]">
+                    Prashanth Keransiya
                   </span>
                 </p>
               </div>
-              <span translate="no" className="px-3 py-1 rounded-xl bg-[#dff1ff]/90 border border-[#7dd3fc] text-[11px] font-bold text-[#0284c7]">
-                Prashanth keransiya
+              <span translate="no" className="px-3 py-1 rounded-xl bg-[#dff1ff]/90 dark:bg-sky-950 border border-[#7dd3fc] text-[11px] font-bold text-[#0284c7] dark:text-[#38bdf8]">
+                Prashanth Keransiya
               </span>
             </div>
 
@@ -2718,8 +2848,17 @@ export function SettingsAndBillingView() {
         <ProfileImageEditorModal
           open={photoEditorMode !== null}
           mode={photoEditorMode || 'avatar'}
-          initialImageUrl={photoEditorMode === 'cover' ? currentCover : currentAvatar}
-          onClose={() => setPhotoEditorMode(null)}
+          initialAction={photoEditorInitialAction}
+          initialImageUrl={
+            photoEditorMode === 'cover'
+              ? currentCover
+              : galleryDraftAvatar || currentAvatar
+          }
+          onClose={() => {
+            setPhotoEditorMode(null);
+            setPhotoEditorInitialAction(null);
+            setGalleryDraftAvatar(null);
+          }}
           onSaveComplete={async (res) => {
             if (photoEditorMode === 'cover') {
               await saveProfileCustomization({
@@ -2731,6 +2870,7 @@ export function SettingsAndBillingView() {
                 avatarDataUrl: res.dataUrl,
                 avatarMimeType: res.mimeType,
               });
+              setGalleryDraftAvatar(null);
             }
           }}
         />
@@ -2761,7 +2901,7 @@ export function SettingsAndBillingView() {
     }
     const cachedKb = Math.max(1, Math.round((cachedBytes * 2) / 1024));
 
-    return (
+    return renderSettingsShell(
       <div className="p-4 lg:p-8 space-y-6">
         <div className="border-b border-slate-200 dark:border-slate-800 pb-5">
           <h1 className="text-2xl font-bold">Storage &amp; Data · Privacy &amp; Cybersecurity</h1>
@@ -2889,6 +3029,79 @@ export function SettingsAndBillingView() {
               <p className="text-xs text-rose-600 dark:text-rose-400">{privacyError}</p>
             )}
 
+            {/* Block & Unblock Users (Managed Strictly Inside Settings) */}
+            {(() => {
+              const blockedIds = profileMedia?.blockedUserIds ?? userProfile?.blockedUserIds ?? [];
+              const blockCandidates = directoryProfiles.filter(
+                (p) => p.uid !== userProfile?.uid && !blockedIds.includes(p.uid)
+              );
+              return (
+                <div className="pt-3 border-t border-[#7dd3fc]/60 dark:border-slate-800 space-y-2.5 text-xs">
+                  <div className="flex items-center justify-between gap-2">
+                    <p className="font-bold text-slate-900 dark:text-white flex items-center gap-1.5">
+                      <Ban className="w-4 h-4 text-rose-600" />
+                      <span>Block User &amp; Blocked Contacts ({blockedIds.length})</span>
+                    </p>
+                  </div>
+                  <p className="text-[11px] text-slate-700 dark:text-slate-300">
+                    Manage blocked contacts here in Settings. Blocked users cannot call or message you.
+                  </p>
+                  {blockCandidates.length > 0 && (
+                    <div className="flex gap-2">
+                      <select
+                        value={blockCandidateUid}
+                        onChange={(e) => setBlockCandidateUid(e.target.value)}
+                        aria-label="Select contact to block"
+                        className="flex-1 px-3 py-2 rounded-xl bg-[#eef8ff]/80 dark:bg-slate-900 border border-[#7dd3fc]/75 dark:border-slate-800 text-slate-900 dark:text-white"
+                      >
+                        <option value="">Select a user to block...</option>
+                        {blockCandidates.map((m) => (
+                          <option key={m.uid} value={m.uid}>
+                            {m.fullName} ({m.country})
+                          </option>
+                        ))}
+                      </select>
+                      <button
+                        type="button"
+                        disabled={!blockCandidateUid}
+                        onClick={async () => {
+                          const target = blockCandidates.find((c) => c.uid === blockCandidateUid);
+                          if (!blockCandidateUid) return;
+                          await blockUserByUid(blockCandidateUid, target?.fullName);
+                          setBlockCandidateUid('');
+                        }}
+                        className="px-3.5 py-2 rounded-xl bg-rose-600 hover:bg-rose-700 disabled:opacity-50 text-white font-semibold shrink-0"
+                      >
+                        Block User
+                      </button>
+                    </div>
+                  )}
+                  {blockedIds.length > 0 && (
+                    <div className="flex flex-wrap gap-2">
+                      {blockedIds.map((bUid) => {
+                        const prof = directoryProfiles.find((p) => p.uid === bUid);
+                        return (
+                          <div
+                            key={`priv_blk_${bUid}`}
+                            className="px-3 py-1.5 rounded-xl bg-[#eef8ff]/85 dark:bg-slate-900 border border-rose-300 dark:border-rose-900 flex items-center gap-2 text-slate-900 dark:text-white"
+                          >
+                            <span>{prof?.fullName || bUid}</span>
+                            <button
+                              type="button"
+                              onClick={() => unblockUserByUid(bUid)}
+                              className="text-[#0284c7] dark:text-[#38bdf8] font-bold hover:underline"
+                            >
+                              Unblock
+                            </button>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  )}
+                </div>
+              );
+            })()}
+
             <h3 className="text-sm font-bold pt-2">Trusted Devices ({userDevices.length})</h3>
             <div className="space-y-2">
               {userDevices.map((d) => (
@@ -3007,7 +3220,7 @@ export function SettingsAndBillingView() {
 
   // Screen 23: App Lock Settings
   if (activeScreen === 'app_lock') {
-    return (
+    return renderSettingsShell(
       <div className="p-4 lg:p-8 max-w-xl space-y-6">
         <h1 className="text-2xl font-bold">App Lock &amp; Biometrics</h1>
         <div className="bg-[#e3f3ff]/78 dark:bg-slate-900 backdrop-blur-2xl border border-[#7dd3fc]/75 dark:border-slate-800 rounded-3xl p-6 space-y-5 shadow-[0_8px_28px_rgba(2,132,199,0.12)]">
@@ -3262,13 +3475,13 @@ export function SettingsAndBillingView() {
           <p className="text-xs text-slate-600 mt-1">
             Official PK CHAT global messenger &amp; family safety platform founded by{' '}
             <span translate="no" className="font-bold text-[#0284c7]">
-              Prashanth keransiya
+              Prashanth Keransiya
             </span>
             .
           </p>
         </div>
         <span translate="no" className="px-3.5 py-1.5 rounded-xl bg-sky-50 border border-[#bae6fd] text-xs font-bold text-[#0369a1]">
-          Prashanth keransiya
+          Prashanth Keransiya
         </span>
       </div>
 

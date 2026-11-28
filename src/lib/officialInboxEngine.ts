@@ -285,9 +285,9 @@ export function buildOfficialInboxGreetings(params: {
       occasion: 'birthday',
       badge: '🎂 Happy Birthday',
       emoji: '🥳🎂',
-      title: `Happy Birthday${nameSuffix}! · இனிய பிறந்தநாள் வாழ்த்துகள்!`,
-      founderName: 'Prashanth keransiya',
-      body: `எங்கள் சொந்த உறவினர் போல அன்புடன், உங்கள் குடும்பத்தில் ஒற்றுமை, அமைதி மற்றும் மகிழ்ச்சி எப்போதும் நிலைத்திருக்க பிரார்த்தனைகளுடன் இனிய பிறந்தநாள் நல்வாழ்த்துகள்! Wishing you unity, peace, health, and warm happiness all year — lovingly from Prashanth keransiya on PK Chat Official.`,
+      title: `Happy Birthday${nameSuffix}!`,
+      founderName: 'Prashanth Keransiya',
+      body: `Warm birthday wishes! May God's abundant blessings bring you and your family lasting happiness, good health, and peace throughout the year ahead. — Prashanth Keransiya Family`,
       activeToday: true,
     });
   }
@@ -295,22 +295,22 @@ export function buildOfficialInboxGreetings(params: {
   items.push({
     id: `greeting_founder_peace_${yearStamp}`,
     occasion: 'founder_peace',
-    badge: '🕊️ PK Chat Official · Official Broadcast',
+    badge: '🕊️ PK Chat Official · Warm Wishes',
     emoji: '🕊️💙',
-    title: 'PK Chat Official Family & Global Peace Broadcast',
-    founderName: 'Prashanth keransiya',
-    body: 'உலக மக்கள் மற்றும் எங்கள் சொந்த உறவினர் போன்ற உங்கள் அன்புக் குடும்பத்தினர் அனைவருக்கும் ஒற்றுமை, அமைதி மற்றும் மகிழ்ச்சி பொங்க நெஞ்சார்ந்த நல்வாழ்த்துகள்! Heartfelt prayers for unity, peace, and happiness from Prashanth keransiya on PK Chat Official.',
+    title: 'PK Chat Official Peace & Blessings Broadcast',
+    founderName: 'Prashanth Keransiya',
+    body: `Wishing you and your family endless happiness, harmony, and peace filled with God's abundant blessings every day. — Prashanth Keransiya Family`,
     activeToday: true,
   });
 
   items.push({
     id: `greeting_national_festival_${yearStamp}`,
     occasion: 'national_festival',
-    badge: '🕊️ National Unity & Peace',
+    badge: '🕊️ National & Independence Day',
     emoji: '🕊️🎉',
-    title: `Warm National Festival Wishes${nameSuffix}! · இனிய தேசிய தின நல்வாழ்த்துகள்!`,
-    founderName: 'Prashanth keransiya',
-    body: 'எங்கள் சொந்த உறவினரைப் போல அன்புடன் பிரார்த்திக்கிறோம் — உங்கள் குடும்பத்திலும் நாட்டிலும் ஒற்றுமை, அமைதி மற்றும் மகிழ்ச்சி தழைத்தோங்க இனிய தேசிய திருநாள் நல்வாழ்த்துகள்! Heartfelt wishes of unity, peace, and happiness from Prashanth keransiya on PK Chat Official.',
+    title: `Happy National & Independence Day${nameSuffix}!`,
+    founderName: 'Prashanth Keransiya',
+    body: `Sending warm wishes on this special national day! May God's blessings bring unity, lasting peace, and happiness to you, your family, and your nation. — Prashanth Keransiya Family`,
     activeToday: false,
   });
 
@@ -319,9 +319,9 @@ export function buildOfficialInboxGreetings(params: {
     occasion: 'christmas',
     badge: isChristmas ? '🎄 Active Celebration' : '🎄 Christmas Wishes',
     emoji: '🎄✨',
-    title: `Merry Christmas${nameSuffix}! · இனிய கிறிஸ்துமஸ் நல்வாழ்த்துகள்!`,
-    founderName: 'Prashanth keransiya',
-    body: 'உங்கள் இல்லத்தில் ஒற்றுமை, அமைதி மற்றும் மகிழ்ச்சி நிறைய எங்கள் சொந்த உறவினர் போல அன்புடன் பிரார்த்திக்கிறோம்! May your home overflow with unity, peace, and happiness this Christmas — warmly from Prashanth keransiya on PK Chat Official.',
+    title: `Merry Christmas${nameSuffix}!`,
+    founderName: 'Prashanth Keransiya',
+    body: `Wishing you and your family a joyful Christmas filled with love, happiness, and peace with God's richest blessings. — Prashanth Keransiya Family`,
     activeToday: isChristmas,
   });
 
@@ -330,20 +330,20 @@ export function buildOfficialInboxGreetings(params: {
     occasion: 'new_year',
     badge: isNewYear ? '🎆 Active Celebration' : '🎆 New Year Wishes',
     emoji: '🎆🥂',
-    title: `Happy New Year${nameSuffix}! · இனிய புத்தாண்டு நல்வாழ்த்துகள்!`,
-    founderName: 'Prashanth keransiya',
-    body: 'புதிய ஆண்டில் உங்கள் குடும்பத்தில் ஒற்றுமை, அமைதி, ஆரோக்கியம் மற்றும் மகிழ்ச்சி பெருக எங்கள் சொந்த உறவினரைப் போல மனமார்ந்த பிரார்த்தனைகள்! Wishing you a safe, united, peaceful, and happy year ahead — warmly from Prashanth keransiya on PK Chat Official.',
+    title: `Happy New Year${nameSuffix}!`,
+    founderName: 'Prashanth Keransiya',
+    body: `Wishing you and your family a bright, healthy, and joyful New Year filled with happiness and peace through God's blessings. — Prashanth Keransiya Family`,
     activeToday: isNewYear,
   });
 
   items.push({
     id: `greeting_ramzan_${yearStamp}`,
     occasion: 'ramzan',
-    badge: '🌙 Ramzan & Eid Wishes',
+    badge: '🌙 Festival & Eid Wishes',
     emoji: '🌙✨',
-    title: `Ramzan Mubarak & Eid Wishes${nameSuffix}! · இனிய ரமலான் நல்வாழ்த்துகள்!`,
-    founderName: 'Prashanth keransiya',
-    body: 'அன்பான சொந்த உறவினர் போல பிரார்த்திக்கிறோம் — உங்கள் குடும்பத்தில் ஒற்றுமை, அமைதி மற்றும் மகிழ்ச்சி என்றென்றும் நிலைக்க இனிய ரமலான் நல்வாழ்த்துகள்! Warm wishes of unity, peace, and happiness from Prashanth keransiya on PK Chat Official.',
+    title: `Warm Festival & Eid Wishes${nameSuffix}!`,
+    founderName: 'Prashanth Keransiya',
+    body: `Wishing you and your family abundant happiness, harmony, and peace with God's blessings on this joyous occasion. — Prashanth Keransiya Family`,
     activeToday: false,
   });
 
@@ -358,8 +358,8 @@ export function buildOfficialInboxGreetings(params: {
       badge: `🎉 ${fest.occasion}`,
       emoji: fest.id === 'mothers-day' ? '👩‍👧‍👦💖' : fest.id === 'womens-day' ? '🌸✨' : '❤️✨',
       title: `${fest.occasion}${nameSuffix}!`,
-      founderName: 'Prashanth keransiya',
-      body: `${fest.message} Heartfelt prayers for unity, peace, and happiness from Prashanth keransiya on PK Chat Official.`,
+      founderName: 'Prashanth Keransiya',
+      body: `${fest.message.replace(/\s*—\s*Prashanth Keransiya Family\s*$/i, '')} Wishing you and your family happiness and peace with God's blessings. — Prashanth Keransiya Family`,
       activeToday: true,
     });
   }

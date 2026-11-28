@@ -75,7 +75,6 @@ import {
 import { tryReadAndroidBridgeGps } from '../lib/offlineSmsSos';
 import { getFastAccurateGps } from '../lib/connectivityAndDnd';
 import { FestivalCanvasOverlay } from './FestivalCanvasOverlay';
-import { PeaceUnityWatermark } from './PeaceUnityWatermark';
 import { TajMahalTributeModal } from './TajMahalTributeModal';
 import { WazeNavigationModal } from './WazeNavigationModal';
 import { MessengerDisasterAlerts } from './MessengerDisasterAlerts';
@@ -167,7 +166,38 @@ const TANGLISH_GREETING_CARDS = [
   },
 ];
 
-type FontStyleOption = 'normal' | 'bold' | 'fancy' | 'caps';
+type FontStyleOption = 'normal' | 'bold' | 'italic' | 'fancy' | 'mono' | 'caps';
+
+const WHATSAPP_ANIMATED_EMOJIS: ReadonlyArray<{ emoji: string; label: string }> = [
+  { emoji: '❤️', label: 'Heart' },
+  { emoji: '😂', label: 'Laugh' },
+  { emoji: '😍', label: 'Love' },
+  { emoji: '🔥', label: 'Fire' },
+  { emoji: '🎉', label: 'Party' },
+  { emoji: '👏', label: 'Clap' },
+  { emoji: '🙏', label: 'Thanks' },
+  { emoji: '😘', label: 'Kiss' },
+  { emoji: '🥳', label: 'Celebrate' },
+  { emoji: '💐', label: 'Flowers' },
+  { emoji: '🎂', label: 'Birthday' },
+  { emoji: '🕊️', label: 'Peace' },
+  { emoji: '✨', label: 'Sparkle' },
+  { emoji: '💯', label: '100' },
+  { emoji: '😭', label: 'Cry' },
+  { emoji: '🤣', label: 'ROFL' },
+  { emoji: '😎', label: 'Cool' },
+  { emoji: '🫶', label: 'Heart Hands' },
+  { emoji: '🌟', label: 'Star' },
+  { emoji: '🪔', label: 'Lamp' },
+];
+
+const WHATSAPP_STANDARD_EMOJIS = [
+  '😀', '😁', '😂', '🤣', '😊', '😇', '🙂', '😉', '😌', '😍',
+  '🥰', '😘', '😋', '😜', '🤩', '🥳', '😎', '🤔', '🤗', '🤭',
+  '😮', '😢', '😭', '😤', '🙏', '👍', '👎', '👏', '🙌', '🤝',
+  '❤️', '🧡', '💛', '💚', '💙', '💜', '🤍', '💖', '🌹', '💐',
+  '🌸', '🎂', '🎁', '🎈', '🎉', '🎊', '🔥', '✨', '⭐', '🕊️',
+];
 
 const THREE_D_EMOJI_CARDS = [
   {
@@ -193,8 +223,13 @@ const THREE_D_EMOJI_CARDS = [
 function applyStylishFont(text: string, style: FontStyleOption): string {
   if (!text || style === 'normal') return text;
   if (style === 'caps') return `${text.toUpperCase()} ✨`;
-  const upperOffset = style === 'bold' ? 0x1d5d4 - 65 : 0x1d4d0 - 65;
-  const lowerOffset = style === 'bold' ? 0x1d5ee - 97 : 0x1d4ea - 97;
+  const ranges: Record<Exclude<FontStyleOption, 'normal' | 'caps'>, [number, number]> = {
+    bold: [0x1d5d4 - 65, 0x1d5ee - 97],
+    italic: [0x1d608 - 65, 0x1d622 - 97],
+    fancy: [0x1d4d0 - 65, 0x1d4ea - 97],
+    mono: [0x1d670 - 65, 0x1d68a - 97],
+  };
+  const [upperOffset, lowerOffset] = ranges[style];
   return Array.from(text)
     .map((ch) => {
       const code = ch.charCodeAt(0);
@@ -318,6 +353,8 @@ export function ChatWorkspace() {
     createGroupChat,
     sendMessage,
     deleteMessage,
+    deleteMessageForMe,
+    deletedForMeIds,
     markMessageRead,
     setTypingStatus,
     offlineOutboxCount,
@@ -399,7 +436,10 @@ export function ChatWorkspace() {
     languagePref?.defaultViewMode === 'original'
   );
   const [showStickers, setShowStickers] = useState(false);
+  const [emojiPickerTab, setEmojiPickerTab] = useState<'animated' | 'emojis' | 'stickers' | 'fonts'>('animated');
+  const [deleteDialogMsg, setDeleteDialogMsg] = useState<ChatMessage | null>(null);
   const [showTanglishCards, setShowTanglishCards] = useState(false);
+  const [showQuickCelebrations, setShowQuickCelebrations] = useState(false);
   const [showTajTributeModal, setShowTajTributeModal] = useState(false);
   const [fontStyle, setFontStyle] = useState<FontStyleOption>('normal');
   const [chatAnimation, setChatAnimation] = useState<ChatAnimationType>(null);
@@ -846,8 +886,14 @@ export function ChatWorkspace() {
 
   const activeMessages = useMemo(() => {
     if (!currentChatId) return [];
-    return messages.filter((m) => m.chatId === currentChatId);
-  }, [messages, currentChatId]);
+    const myUid = userProfile?.uid || '';
+    return messages.filter(
+      (m) =>
+        m.chatId === currentChatId &&
+        !deletedForMeIds.includes(m.messageId) &&
+        !(myUid && m.deletedForUserIds?.includes(myUid))
+    );
+  }, [messages, currentChatId, deletedForMeIds, userProfile?.uid]);
 
   const activeWallpaper = useMemo(() => {
     const wpId =
@@ -2706,20 +2752,21 @@ export function ChatWorkspace() {
     );
   }
 
-  // Screen 10: Chat List Screen
+  // Screen 10: Chat List Screen (Clean WhatsApp Mobile Proportions)
   if (activeScreen === 'chat_list') {
     return (
-      <div className="relative min-h-full p-4 lg:p-8 space-y-6">
-        <PeaceUnityWatermark />
-        <div className="relative z-10 space-y-6">
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+      <div className="relative min-h-full p-3.5 sm:p-5 lg:p-8 space-y-4">
+        <div className="relative z-10 space-y-4">
+        <div className="flex flex-wrap items-center justify-between gap-3">
           <div>
-            <h1 className="text-2xl font-bold text-slate-900 dark:text-white">Chats &amp; Groups</h1>
-            <p className="text-sm text-slate-600 dark:text-slate-300">
-              All incoming messages translate automatically into {userProfile?.preferredLanguageName}.
+            <h1 className="text-[22px] sm:text-2xl font-bold text-slate-900 dark:text-white tracking-tight">
+              Chats
+            </h1>
+            <p className="text-[13px] text-slate-600 dark:text-slate-300">
+              Auto-translating into {userProfile?.preferredLanguageName || 'English'}
             </p>
           </div>
-          <div className="flex flex-wrap items-center gap-2">
+          <div className="flex items-center gap-2">
             <button
               onClick={async () => {
                 if (!userProfile) return;
@@ -2732,15 +2779,15 @@ export function ChatWorkspace() {
                   );
                 }
               }}
-              className="px-4 py-2.5 rounded-xl bg-gradient-to-r from-[#0284c7] to-[#0072ff] dark:from-[#00c6ff] dark:to-[#0072ff] hover:brightness-110 text-white text-xs font-semibold whitespace-nowrap shadow-xs"
+              className="min-h-[42px] px-4 py-2 rounded-2xl bg-gradient-to-r from-[#0284c7] to-[#0072ff] hover:brightness-110 text-white text-[13px] font-semibold whitespace-nowrap shadow-xs"
             >
-              + New 1-to-1 Chat
+              + New Chat
             </button>
             <button
               onClick={() => setShowNewGroup(true)}
-              className="px-4 py-2.5 rounded-xl bg-slate-900 dark:bg-[#38bdf8] hover:bg-slate-800 dark:hover:brightness-110 text-white dark:text-slate-950 text-xs font-semibold whitespace-nowrap"
+              className="min-h-[42px] px-4 py-2 rounded-2xl bg-white/80 dark:bg-slate-800/80 backdrop-blur-xl border border-sky-200/80 dark:border-slate-700 text-slate-900 dark:text-white text-[13px] font-semibold whitespace-nowrap"
             >
-              + New Group
+              + Group
             </button>
           </div>
         </div>
@@ -2842,292 +2889,169 @@ export function ChatWorkspace() {
           </button>
         </section>
 
-        {/* Instant Personal SOS Contacts Banner */}
-        <div
-          role="region"
-          aria-label="Personal SOS Contacts Alert"
-          className="rounded-2xl bg-gradient-to-r from-[#0284c7] to-[#0072ff] dark:from-[#0a192f] dark:to-[#0369a1] text-white p-4 border border-[#38bdf8]/40 shadow-[0_0_20px_rgba(0,198,255,0.2)] flex flex-col sm:flex-row sm:items-center justify-between gap-3"
-        >
-          <div className="min-w-0 space-y-0.5">
-            <p className="text-sm font-extrabold flex items-center gap-2">
-              <span aria-hidden="true">🛡️</span>
-              <span>பர்சனல் எமர்ஜென்சி தொடர்புகள் · Personal SOS Contacts</span>
-            </p>
-            <p className="text-xs text-[#e0f2fe]">
-              உங்களது குடும்பத்தினர் மற்றும் நம்பகமான உறவினர்களுக்கு (Max 3) GPS இருப்பிடத்துடன் தகவல் அனுப்பவும்
-            </p>
-          </div>
+        {/* Compact Frosted Quick-Action Bar (Official Inbox, Personal SOS Contacts, Live Class Swipe Hint, Celebrations) */}
+        <div className="flex items-center gap-2 overflow-x-auto pb-0.5">
+          <button
+            type="button"
+            onClick={openOfficialInboxAndMarkRead}
+            className="min-h-[40px] px-3.5 py-2 rounded-2xl pk-glass text-[12px] font-semibold text-[#0369a1] dark:text-[#38bdf8] whitespace-nowrap inline-flex items-center gap-1.5 shrink-0"
+          >
+            <span>🛡️</span>
+            <span>PK Chat Official Broadcast · <span translate="no">Prashanth Keransiya</span></span>
+            {unreadOfficialCount > 0 && (
+              <span className="px-1.5 py-0.5 rounded-full bg-[#0284c7] text-white text-[10px] font-bold">
+                {unreadOfficialCount}
+              </span>
+            )}
+          </button>
           <button
             type="button"
             onClick={() => setActiveScreen('sos_emergency')}
-            className="min-h-[40px] px-4 py-2 rounded-xl bg-[#e0f2fe]/95 text-[#0369a1] hover:bg-[#bae6fd] text-xs font-extrabold whitespace-nowrap shadow-sm shrink-0"
+            className="min-h-[40px] px-3.5 py-2 rounded-2xl bg-rose-50/85 dark:bg-rose-950/50 backdrop-blur-xl border border-rose-200/80 dark:border-rose-700/50 text-rose-700 dark:text-rose-200 text-[12px] font-semibold whitespace-nowrap inline-flex items-center gap-1.5 shrink-0"
           >
-            🛡️ Personal SOS Contacts
+            <Shield className="w-3.5 h-3.5" />
+            <span>SOS Contacts ({emergencyContacts.length}/3)</span>
           </button>
-        </div>
-
-        {/* PK Chat Official Broadcast Card (Routes Birthday, Festival Greetings & Red Alerts into Official PK Chat Inbox) */}
-        <button
-          type="button"
-          onClick={openOfficialInboxAndMarkRead}
-          className="w-full text-left rounded-2xl bg-gradient-to-r from-[#0284c7] to-[#0369a1] text-white p-4 border border-sky-300/40 shadow-sm hover:brightness-105 transition-all space-y-2"
-        >
-          <div className="flex items-center justify-between gap-2">
-            <span className="text-sm font-extrabold flex items-center gap-2">
-              <span aria-hidden="true">🛡️📢</span>
-              <span>PK Chat Official Broadcast · <span translate="no">Prashanth keransiya</span></span>
-            </span>
-            <span className="text-[11px] font-semibold text-[#e0f2fe] shrink-0">
-              {unreadOfficialCount > 0 ? `${unreadOfficialCount} New · ` : ''}Open Official PK Chat ›
-            </span>
-          </div>
-          <p className="text-xs text-[#e0f2fe]">
-            பிறந்தநாள், கிறிஸ்துமஸ், புத்தாண்டு, ரமலான் வாழ்த்துகள் &amp; 100% அரசு பேரிடர் சிவப்பு எச்சரிக்கைகள் (Official Inbox):
-          </p>
-          <div className="rounded-xl bg-white/15 px-3 py-2 text-xs font-medium text-white leading-relaxed">
-            {officialGreetingBroadcast}
-          </div>
-        </button>
-
-        {/* Official Disaster Early Warning Monitor & Pre-Loaded Offline Emergency Directory */}
-        <div className="grid lg:grid-cols-12 gap-3">
-          <div
-            className={`lg:col-span-7 rounded-2xl p-3.5 border text-xs flex flex-col justify-between gap-2 ${
-              disasterAlerts.length > 0
-                ? 'bg-gradient-to-br from-rose-900 to-red-800 text-white border-rose-500/70 shadow-sm'
-                : 'bg-[#e0f2fe] dark:bg-[#202c33] text-[#0369a1] dark:text-[#e9edef] border-[#bae6fd] dark:border-[#222d34]'
-            }`}
-          >
-            <div className="flex items-start justify-between gap-2">
-              <div className="flex items-center gap-2 font-bold">
-                <AlertTriangle
-                  className={`w-4 h-4 shrink-0 ${
-                  disasterAlerts.length > 0 ? 'text-amber-300' : 'text-[#0284c7] dark:text-[#38bdf8]'
-                }`}
-              />
-              <span>
-                {disasterAlerts.length > 0
-                  ? `⚠️ Official Disaster Alert: ${disasterAlerts[0].title}`
-                  : '⚠️ Disaster Early Warning System (USGS / NOAA / NASA EONET)'}
-              </span>
-            </div>
-            <button
-              type="button"
-              onClick={() => setActiveScreen('disaster_alerts')}
-              className={`px-2.5 py-1 rounded-lg text-[11px] font-bold shrink-0 ${
-                disasterAlerts.length > 0
-                  ? 'bg-black/30 hover:bg-black/45 text-white'
-                  : 'bg-[#0284c7] hover:bg-[#0369a1] text-white'
-              }`}
-            >
-              Live Alerts ({disasterAlerts.length})
-            </button>
-          </div>
-          <p
-            className={`text-[11px] leading-relaxed ${
-              disasterAlerts.length > 0 ? 'text-rose-100' : 'text-slate-700 dark:text-[#8696a0]'
-            }`}
-          >
-            {disasterAlerts.length > 0
-              ? `${disasterAlerts[0].officialSource} · ${disasterAlerts[0].location} (${disasterAlerts[0].severity.toUpperCase()})`
-              : `Live feeds connected for ${
-                  consentedLocation?.country || userProfile?.country || 'your region'
-                }. No severe weather, flood, tsunami, or earthquake alerts active in current official feed.`}
-          </p>
-        </div>
-
-        <div className="lg:col-span-5 rounded-2xl bg-[#e3f3ff]/78 dark:bg-white/[0.035] backdrop-blur-2xl border border-[#7dd3fc]/75 dark:border-[#00c6ff]/20 p-3.5 space-y-2 text-xs shadow-sm">
-          <div className="flex items-center justify-between gap-2">
-            <span className="font-bold text-[#0284c7] dark:text-[#38bdf8] flex items-center gap-1.5">
-              <Shield className="w-3.5 h-3.5" />
-              <span>Personal SOS Contacts (குடும்ப / உறவினர் எண்கள்)</span>
-            </span>
-            <button
-              type="button"
-              onClick={() => setActiveScreen('sos_emergency')}
-              className="text-[11px] font-semibold text-[#0284c7] dark:text-[#38bdf8] hover:underline shrink-0"
-            >
-              Manage ({emergencyContacts.length}/3)
-            </button>
-          </div>
-          {emergencyContacts.length === 0 ? (
-            <button
-              type="button"
-              onClick={() => setActiveScreen('sos_emergency')}
-              className="w-full px-3 py-2.5 rounded-xl bg-sky-50/80 dark:bg-[#00c6ff]/10 border border-[#bae6fd] dark:border-[#00c6ff]/25 text-left text-[11px] text-slate-700 dark:text-slate-200 hover:border-[#00c6ff] flex items-center justify-between"
-            >
-              <span>+ Add Family / Relative Personal SOS Contacts</span>
-              <span className="font-bold text-[#0284c7] dark:text-[#38bdf8]">Setup ›</span>
-            </button>
-          ) : (
-            <div className="space-y-1.5 text-[11px]">
-              {emergencyContacts.slice(0, 3).map((ec, idx) => (
-                <div
-                  key={ec.id}
-                  className="px-2.5 py-1.5 rounded-lg bg-[#eef8ff]/88 dark:bg-[#00c6ff]/[0.06] border border-[#7dd3fc]/75 dark:border-[#00c6ff]/20 flex items-center justify-between gap-2"
-                >
-                  <span className="text-slate-700 dark:text-slate-200 truncate">
-                    👤 {ec.name} ({ec.relationship || 'Family'})
-                  </span>
-                  <span className="font-bold font-mono text-rose-600 dark:text-[#38bdf8] shrink-0">
-                    {ec.phone} · P{idx + 1}
-                  </span>
-                </div>
-              ))}
-            </div>
-          )}
-        </div>
-      </div>
-
-      <MessengerDisasterAlerts maxVisible={2} />
-
-      {/* Floating Viber Emoji Overlay Layer */}
-      {floatingEmojis.length > 0 && (
-        <div
-          aria-hidden="true"
-          className="pointer-events-none fixed inset-x-0 bottom-20 h-64 z-[65] overflow-hidden"
-        >
-          {floatingEmojis.map((fe) => (
-            <span
-              key={fe.id}
-              className="animate-pk-viber-float absolute bottom-2 text-3xl select-none"
-              style={{ left: `${fe.leftPct}%` }}
-            >
-              {fe.emoji}
-            </span>
-          ))}
-        </div>
-      )}
-
-      {/* Universal & Special Days 3D Greeting Cards Quick Bar */}
-      <div className="rounded-2xl bg-[#e3f3ff]/78 dark:bg-[#202c33] backdrop-blur-2xl border border-[#7dd3fc]/75 dark:border-[#222d34] p-3.5 space-y-2.5 shadow-sm">
-        <div className="flex flex-wrap items-center justify-between gap-2 text-xs">
-          <span className="font-bold text-[#0284c7] dark:text-[#38bdf8] flex items-center gap-1.5">
-            <Smile className="w-3.5 h-3.5" />
-            <span>✨ Global Celebrations &amp; Special Days ({quickSendFestivalCards.length})</span>
-          </span>
-          <div className="flex items-center gap-2">
-            <button
-              type="button"
-              onClick={() => setShowTajTributeModal(true)}
-              className="px-2.5 py-1 rounded-lg bg-gradient-to-r from-neutral-900 via-rose-900 to-[#e50914] border border-amber-400/60 text-amber-300 hover:brightness-110 text-[11px] font-bold inline-flex items-center gap-1 shadow-xs"
-            >
-              <span>🏛️</span>
-              <span>Taj Mahal Tribute</span>
-            </button>
-            <span className="text-[11px] text-slate-500 dark:text-[#8696a0] hidden sm:inline">
-              Tap card to send &amp; animate in chat
-            </span>
-          </div>
-        </div>
-
-        <div className="flex flex-wrap gap-1.5">
-          {(
-            [
-              { id: 'all', label: `All (${FESTIVAL_3D_CARDS.length})` },
-              { id: 'family', label: 'Family & Friends' },
-              { id: 'milestone', label: 'Birthdays & Milestones' },
-              { id: 'global', label: 'Global New Year' },
-              { id: 'special', label: 'Love & Taj Mahal' },
-            ] as const
-          ).map((tab) => (
-            <button
-              key={tab.id}
-              type="button"
-              onClick={() => setFestivalQuickFilter(tab.id)}
-              className={`px-2.5 py-1 rounded-lg text-[11px] font-semibold transition-colors ${
-                festivalQuickFilter === tab.id
-                  ? 'bg-[#0284c7] text-white dark:bg-[#38bdf8] dark:text-slate-950'
-                  : 'bg-[#f0f9ff] dark:bg-[#111b21] text-[#0369a1] dark:text-[#aebac1] hover:bg-[#e0f2fe] dark:hover:bg-[#2a3942]'
-              }`}
-            >
-              {tab.label}
-            </button>
-          ))}
-        </div>
-
-        <div className="grid grid-cols-3 sm:grid-cols-5 lg:grid-cols-7 gap-2 max-h-64 overflow-y-auto pr-1">
-          {quickSendFestivalCards.map((card) => (
-            <button
-              key={card.id}
-              type="button"
-              onClick={async () => {
-                const targetChat = directChats[0] || null;
-                const targetGroup = !targetChat ? groupChats[0] || null : null;
-                const targetId = targetChat?.chatId || targetGroup?.groupId;
-                if (!targetId) {
-                  setChatActionError('Create or select a conversation below before sending a card.');
-                  return;
-                }
-                setChatActionError(null);
-                try {
-                  await sendMessage({
-                    chatId: targetId,
-                    chatType: targetGroup ? 'group' : 'direct',
-                    participantIds: targetGroup
-                      ? targetGroup.memberIds
-                      : targetChat?.participantIds || [userProfile?.uid || ''],
-                    text: card.text,
-                    messageType: 'text',
-                    e2eeEnabled: Boolean(targetChat?.e2eeEnabled),
-                  });
-                  setChatSecurityToast(
-                    `🛡️ ${card.title} encrypted & sent securely!`
-                  );
-                  setActiveChat(targetId, targetGroup ? 'group' : 'direct');
-                  setActiveScreen(targetGroup ? 'group_chat' : 'individual_chat');
-                } catch (err) {
-                  setChatActionError(err instanceof Error ? err.message : 'Unable to send card.');
-                }
-              }}
-              className="rounded-xl bg-[#eef8ff]/85 dark:bg-[#111b21] hover:bg-[#dff1ff] dark:hover:bg-[#2a3942] border border-[#7dd3fc]/75 dark:border-[#374248] py-2 px-1.5 text-center transition-colors flex flex-col items-center gap-0.5 shadow-2xs"
-            >
-              <span className="text-lg">{card.emoji}</span>
-              <span className="text-[10px] font-bold text-[#0369a1] dark:text-yellow-300 truncate max-w-full">
-                {card.shortLabel}
-              </span>
-            </button>
-          ))}
-        </div>
-      </div>
-
-      {/* Viber-Style Animated Floating Emojis Tray + Auto-Reply Status */}
-      <div className="rounded-2xl bg-[#e3f3ff]/78 dark:bg-[#202c33] backdrop-blur-2xl border border-[#7dd3fc]/75 dark:border-[#222d34] p-3.5 flex flex-col sm:flex-row sm:items-center justify-between gap-3 shadow-sm">
-        <div className="space-y-1.5 min-w-0">
-          <p className="text-xs font-bold text-[#0369a1] dark:text-[#33b3ff] flex items-center gap-1.5">
-            <span>✨</span>
-            <span>Viber பாணி அனிமேஷன் எமோஜிகள் (Tap to Launch 3D Floating Emojis)</span>
-          </p>
-          <div className="flex flex-wrap items-center gap-2">
-            {(['❤️', '😂', '😍', '🎉', '🔥', '👍', '🪔'] as const).map((em) => (
-              <button
-                key={em}
-                type="button"
-                onClick={() => spawnViberEmoji(em)}
-                aria-label={`Launch floating ${em} emoji`}
-                className="w-9 h-9 rounded-full bg-[#f0f9ff] dark:bg-[#111b21] hover:bg-[#e0f2fe] dark:hover:bg-[#2a3942] border border-[#bae6fd] dark:border-[#374248] text-lg flex items-center justify-center transition-transform hover:scale-110 active:scale-95"
-              >
-                {em}
-              </button>
-            ))}
-          </div>
-        </div>
-
-        <div className="flex items-center gap-2 shrink-0">
           <button
             type="button"
-            onClick={() => setActiveScreen('profile')}
-            className={`px-3 py-2 rounded-xl border text-xs font-semibold flex items-center gap-1.5 transition-colors ${
-              autoReplyEnabled
-                ? 'bg-sky-50 dark:bg-sky-950/60 border-[#38bdf8] dark:border-sky-700 text-[#0284c7] dark:text-[#38bdf8]'
-                : 'bg-[#f0f9ff] dark:bg-[#111b21] border-[#bae6fd] dark:border-[#374248] text-[#0369a1] dark:text-slate-300'
-            }`}
+            onClick={() => setShowQuickCelebrations((v) => !v)}
+            className="min-h-[40px] px-3.5 py-2 rounded-2xl pk-glass text-[12px] font-semibold text-slate-700 dark:text-slate-200 whitespace-nowrap inline-flex items-center gap-1.5 shrink-0"
           >
-            <span>💬</span>
-            <span>{autoReplyEnabled ? 'Auto-Reply: ON' : 'Setup Auto-Reply'}</span>
+            <Smile className="w-3.5 h-3.5 text-[#0284c7]" />
+            <span>{showQuickCelebrations ? 'Hide Greetings' : 'Celebrations & Emojis'}</span>
           </button>
         </div>
-      </div>
+
+        {/* Floating Viber Emoji Overlay Layer */}
+        {floatingEmojis.length > 0 && (
+          <div
+            aria-hidden="true"
+            className="pointer-events-none fixed inset-x-0 bottom-20 h-64 z-[65] overflow-hidden"
+          >
+            {floatingEmojis.map((fe) => (
+              <span
+                key={fe.id}
+                className="animate-pk-viber-float absolute bottom-2 text-3xl select-none"
+                style={{ left: `${fe.leftPct}%` }}
+              >
+                {fe.emoji}
+              </span>
+            ))}
+          </div>
+        )}
+
+        {/* Collapsible 3D Greeting Cards & Animated Emojis Drawer */}
+        {showQuickCelebrations && (
+          <div className="rounded-2xl pk-glass p-4 space-y-3">
+            <div className="flex flex-wrap items-center justify-between gap-2 text-xs">
+              <span className="font-bold text-[#0284c7] dark:text-[#38bdf8] flex items-center gap-1.5">
+                <Smile className="w-4 h-4" />
+                <span>Celebrations &amp; Special Days ({quickSendFestivalCards.length})</span>
+              </span>
+              <div className="flex items-center gap-2">
+                <button
+                  type="button"
+                  onClick={() => setShowTajTributeModal(true)}
+                  className="px-2.5 py-1 rounded-lg bg-gradient-to-r from-neutral-900 via-rose-900 to-[#e50914] border border-amber-400/60 text-amber-300 hover:brightness-110 text-[11px] font-bold inline-flex items-center gap-1"
+                >
+                  <span>🏛️</span>
+                  <span>Taj Mahal Tribute</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setActiveScreen('profile')}
+                  className="px-2.5 py-1 rounded-lg bg-sky-50 dark:bg-sky-950/60 border border-[#bae6fd] text-[#0284c7] dark:text-[#38bdf8] text-[11px] font-semibold"
+                >
+                  {autoReplyEnabled ? 'Auto-Reply: ON' : 'Auto-Reply'}
+                </button>
+              </div>
+            </div>
+
+            <div className="flex flex-wrap gap-1.5">
+              {(
+                [
+                  { id: 'all', label: `All (${FESTIVAL_3D_CARDS.length})` },
+                  { id: 'family', label: 'Family & Friends' },
+                  { id: 'milestone', label: 'Birthdays & Milestones' },
+                  { id: 'global', label: 'New Year' },
+                  { id: 'special', label: 'Special' },
+                ] as const
+              ).map((tab) => (
+                <button
+                  key={tab.id}
+                  type="button"
+                  onClick={() => setFestivalQuickFilter(tab.id)}
+                  className={`px-2.5 py-1 rounded-lg text-[11px] font-semibold transition-colors ${
+                    festivalQuickFilter === tab.id
+                      ? 'bg-[#0284c7] text-white dark:bg-[#38bdf8] dark:text-slate-950'
+                      : 'bg-white/75 dark:bg-slate-900 text-[#0369a1] dark:text-slate-300'
+                  }`}
+                >
+                  {tab.label}
+                </button>
+              ))}
+            </div>
+
+            <div className="grid grid-cols-3 sm:grid-cols-5 lg:grid-cols-7 gap-2 max-h-56 overflow-y-auto pr-1">
+              {quickSendFestivalCards.map((card) => (
+                <button
+                  key={card.id}
+                  type="button"
+                  onClick={async () => {
+                    const targetChat = directChats[0] || null;
+                    const targetGroup = !targetChat ? groupChats[0] || null : null;
+                    const targetId = targetChat?.chatId || targetGroup?.groupId;
+                    if (!targetId) {
+                      setChatActionError('Create or select a conversation below before sending a card.');
+                      return;
+                    }
+                    setChatActionError(null);
+                    try {
+                      await sendMessage({
+                        chatId: targetId,
+                        chatType: targetGroup ? 'group' : 'direct',
+                        participantIds: targetGroup
+                          ? targetGroup.memberIds
+                          : targetChat?.participantIds || [userProfile?.uid || ''],
+                        text: card.text,
+                        messageType: 'text',
+                        e2eeEnabled: Boolean(targetChat?.e2eeEnabled),
+                      });
+                      setChatSecurityToast(`${card.title} sent securely!`);
+                      setActiveChat(targetId, targetGroup ? 'group' : 'direct');
+                      setActiveScreen(targetGroup ? 'group_chat' : 'individual_chat');
+                    } catch (err) {
+                      setChatActionError(err instanceof Error ? err.message : 'Unable to send card.');
+                    }
+                  }}
+                  className="rounded-xl bg-white/80 dark:bg-slate-900 hover:bg-sky-50 border border-sky-200/80 dark:border-slate-700 py-2 px-1.5 text-center transition-colors flex flex-col items-center gap-0.5"
+                >
+                  <span className="text-lg">{card.emoji}</span>
+                  <span className="text-[10px] font-bold text-[#0369a1] dark:text-sky-300 truncate max-w-full">
+                    {card.shortLabel}
+                  </span>
+                </button>
+              ))}
+            </div>
+
+            <div className="flex flex-wrap items-center gap-2 pt-1 border-t border-sky-200/60 dark:border-slate-800">
+              <span className="text-[11px] font-semibold text-slate-600 dark:text-slate-300">
+                Floating Emojis:
+              </span>
+              {(['❤️', '😂', '😍', '🎉', '🔥', '👍', '🕊️'] as const).map((em) => (
+                <button
+                  key={em}
+                  type="button"
+                  onClick={() => spawnViberEmoji(em)}
+                  aria-label={`Launch floating ${em} emoji`}
+                  className="w-9 h-9 rounded-full bg-white/80 dark:bg-slate-900 border border-sky-200 dark:border-slate-700 text-lg flex items-center justify-center active:scale-95"
+                >
+                  {em}
+                </button>
+              ))}
+            </div>
+          </div>
+        )}
 
       {chatSecurityToast && (
         <div className="p-3 rounded-xl bg-sky-50 dark:bg-sky-950/60 border border-[#bae6fd] dark:border-sky-800 flex items-center justify-between gap-3 text-xs text-[#0369a1] dark:text-sky-200 font-medium">
@@ -3582,51 +3506,38 @@ export function ChatWorkspace() {
                 </button>
               </div>
 
-              <div className="p-4 overflow-y-auto space-y-3 flex-1 bg-[#d6edff]/90 dark:bg-[#0b141a]">
-                <div className="p-3.5 rounded-2xl bg-[#eef8ff]/88 dark:bg-[#202c33] backdrop-blur-xl border border-[#7dd3fc]/75 text-xs space-y-1.5">
+              <div className="relative flex-1 min-h-0 flex flex-col overflow-hidden bg-[#dff1ff] dark:bg-[#0b141a]">
+                <div
+                  aria-hidden="true"
+                  className="pointer-events-none select-none absolute inset-0 z-0 flex items-center justify-center overflow-hidden"
+                >
+                  <img
+                    src={userSettings?.customWallpaperData || activeWallpaper.imageUrl}
+                    alt=""
+                    loading="eager"
+                    decoding="async"
+                    className="w-full h-full object-contain object-center opacity-45 dark:opacity-25"
+                    referrerPolicy="no-referrer"
+                  />
+                  <div className="absolute inset-0 bg-gradient-to-b from-[#e8f6ff]/55 via-[#dff1ff]/40 to-[#e8f6ff]/60 dark:from-slate-950/70 dark:via-slate-950/60 dark:to-slate-950/75" />
+                </div>
+
+                <div className="relative z-10 p-4 overflow-y-auto space-y-3 flex-1">
+                <div className="max-w-[90%] rounded-2xl rounded-tl-sm p-3.5 bg-[#eef8ff]/92 dark:bg-[#202c33]/92 backdrop-blur-xl border border-[#7dd3fc]/75 text-xs space-y-1.5 shadow-xs">
                   <div className="flex items-center justify-between gap-2">
                     <p className="font-bold text-[#0284c7] dark:text-[#33b3ff] flex items-center gap-1.5">
                       <ShieldCheck className="w-4 h-4 shrink-0" />
-                      <span>Cyber Shield &amp; Verified Agency Guard Active</span>
+                      <span>PK Chat Official 🛡️✓ · Cyber Shield Active</span>
                     </p>
                     <span className="text-[10px] font-bold text-[#0284c7] dark:text-[#38bdf8]">✓✓ Read</span>
                   </div>
-                  <p className="text-slate-600 dark:text-[#e9edef]">
-                    உங்கள் செய்திகள், குரல் அழைப்புகள் மற்றும் பேரிடர் அறிவிப்புகள் அனைத்தும் 100% அரசு அதிகாரப்பூர்வ சான்றுடன் பாதுகாப்புடன் உள்ளன.
+                  <p className="text-slate-700 dark:text-[#e9edef] leading-relaxed">
+                    Your messages, voice calls, and country emergency alerts are verified and protected by official agencies.
                   </p>
                 </div>
 
-                {/* Localized 100% Government-Verified Red Alerts Inside Official PK Chat */}
-                {localizedRedAlerts.length > 0 && (
-                  <div className="space-y-2">
-                    <p className="text-[11px] font-extrabold uppercase tracking-wider text-rose-700 dark:text-rose-300 px-1">
-                      100% Government Disaster &amp; Emergency Red Alerts ({activeCountryName})
-                    </p>
-                    {localizedRedAlerts.slice(0, 5).map((alert) => (
-                      <div
-                        key={`inbox_red_${alert.alertId}`}
-                        className={`p-3.5 rounded-2xl border text-xs space-y-1.5 ${
-                          alert.isRedAlert
-                            ? 'bg-gradient-to-br from-rose-700 to-red-800 text-white border-rose-400 shadow-md'
-                            : 'bg-amber-50 dark:bg-amber-950/60 border-amber-300 dark:border-amber-700 text-amber-950 dark:text-amber-100'
-                        }`}
-                      >
-                        <div className="flex items-center justify-between gap-2">
-                          <span className="px-2 py-0.5 rounded-md bg-black/25 font-extrabold text-[10px] uppercase">
-                            {alert.redAlertBadge}
-                          </span>
-                          <span className="text-[10px] opacity-90 font-semibold">✓✓ Seen</span>
-                        </div>
-                        <p className="font-bold text-sm leading-snug">{alert.localizedTitle}</p>
-                        <p className="text-[11px] opacity-95">{alert.localizedAdvice}</p>
-                        <p className="text-[10px] opacity-85">
-                          {alert.agencyLabel} · {alert.areaLabel}
-                          {typeof alert.distanceKm === 'number' ? ` (${alert.distanceKm.toFixed(0)} km)` : ''}
-                        </p>
-                      </div>
-                    ))}
-                  </div>
-                )}
+                {/* Country Emergency Alerts Delivered as Regular PK Chat Official Chat Messages */}
+                <MessengerDisasterAlerts variant="chat_message" maxVisible={5} />
 
                 {/* Birthday, Christmas, New Year, Ramzan & Official Founder Wishes Inside Official PK Chat */}
                 <div className="space-y-2">
@@ -3691,6 +3602,7 @@ export function ChatWorkspace() {
                     })}
                   </div>
                 )}
+                </div>
               </div>
 
               <div className="px-4 py-3 bg-[#dff1ff]/90 dark:bg-[#202c33] border-t border-[#7dd3fc]/75 dark:border-[#2a3942] text-[11px] text-center text-slate-600 dark:text-[#8696a0]">
@@ -3854,42 +3766,27 @@ export function ChatWorkspace() {
               </div>
               <div className="flex flex-wrap items-center gap-1.5">
                 <p
-                  className="text-[11px] lg:text-xs text-[#e0f2fe] dark:text-sky-100 truncate"
+                  className="text-[11px] lg:text-xs text-[#e0f2fe] dark:text-sky-100 truncate flex items-center gap-1.5"
                 >
-                  {isGroup
-                    ? `${activeGroupChat?.memberIds.length || 1} members · Auto-translate active`
-                    : `${intentionalDataOff ? 'Offline (Data Off)' : activePartner?.presenceLabel || 'Online'} · ${userProfile?.preferredLanguageName || 'English'}`}
+                  {!isGroup && !intentionalDataOff && activePartner?.isOnline && (
+                    <span
+                      aria-hidden="true"
+                      className="inline-block w-2 h-2 rounded-full bg-sky-300 ring-2 ring-white/40 shrink-0"
+                    />
+                  )}
+                  <span className="truncate">
+                    {isGroup
+                      ? `${activeGroupChat?.memberIds.length || 1} members · Auto-translate active`
+                      : intentionalDataOff
+                        ? 'Offline'
+                        : activePartner?.presenceLabel || 'Online'}
+                  </span>
                 </p>
-                <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-full bg-white/15 text-[10px] font-semibold text-white shrink-0">
-                  <Sun className="w-2.5 h-2.5 text-amber-200" />
-                  <span>{weatherSnapshot.icon} {weatherSnapshot.tempC}°C</span>
-                </span>
               </div>
             </div>
           </div>
 
           <div className="flex items-center gap-1.5 shrink-0">
-            {!isGroup && activePartner?.uid && activePartner.uid !== userProfile?.uid && (
-              <button
-                type="button"
-                onClick={() =>
-                  setBlockConfirmTarget({
-                    uid: activePartner.uid,
-                    name: activePartner.name,
-                    currentlyBlocked: activePartner.blocked,
-                  })
-                }
-                className={`px-2.5 py-1.5 rounded-xl text-white text-xs font-bold whitespace-nowrap flex items-center gap-1 ${
-                  activePartner.blocked
-                    ? 'bg-[#0284c7] hover:bg-[#0369a1]'
-                    : 'bg-rose-600 hover:bg-rose-700'
-                }`}
-                title={activePartner.blocked ? 'Unblock User' : 'Block User'}
-              >
-                <Ban className="w-3.5 h-3.5 shrink-0" />
-                <span>{activePartner.blocked ? 'Unblock' : 'Block User'}</span>
-              </button>
-            )}
             <button
               type="button"
               onClick={() => setGlobalShowOriginal((v) => !v)}
@@ -4134,24 +4031,22 @@ export function ChatWorkspace() {
           </form>
         )}
 
-        {/* Message Feed Stage with Fixed Non-Scrolling World-Peace Wallpaper (Uncropped object-contain) */}
-        <div className="relative flex-1 min-h-0 flex flex-col overflow-hidden bg-[#e0f2fe]/45 dark:bg-[#0b141a]">
+        {/* Message Feed Stage with Clear Dove-and-Globe Chat Box Interior Backdrop (No White Blocking) */}
+        <div className="relative flex-1 min-h-0 flex flex-col overflow-hidden bg-[#d7efff] dark:bg-[#0b141a]">
           <div
             aria-hidden="true"
-            className="pointer-events-none select-none absolute inset-0 z-0 flex items-center justify-center overflow-hidden bg-[#e0f2fe]/45 dark:bg-[#0b141a]"
+            className="pointer-events-none select-none absolute inset-0 z-0 flex items-center justify-center overflow-hidden"
           >
             <img
               src={userSettings?.customWallpaperData || activeWallpaper.imageUrl}
               alt=""
-              className={`w-full h-full transition-all duration-200 ${
-                wallpaperFit === 'contain'
-                  ? 'object-contain object-center opacity-40 dark:opacity-25'
-                  : 'object-cover object-center opacity-30 dark:opacity-20'
-              }`}
+              loading="eager"
+              decoding="async"
+              className="w-full h-full object-cover object-center opacity-80 dark:opacity-40 transition-all duration-200"
               referrerPolicy="no-referrer"
             />
+            <div className="absolute inset-0 bg-gradient-to-b from-[#d7efff]/22 via-transparent to-[#d7efff]/28 dark:from-slate-950/60 dark:via-slate-950/50 dark:to-slate-950/65" />
           </div>
-          <PeaceUnityWatermark />
 
           {/* Floating Viber Emoji Stage inside Active Thread */}
           {floatingEmojis.length > 0 && (
@@ -4234,8 +4129,10 @@ export function ChatWorkspace() {
                 </button>
               </div>
             )}
+            {/* Country Emergency Alerts Delivered as Regular PK Chat Official Messages Inside the Chat Box */}
+            <MessengerDisasterAlerts variant="chat_message" maxVisible={2} />
             {activeMessages.length === 0 ? (
-              <div className="p-8 rounded-2xl bg-[#e3f3ff]/82 dark:bg-slate-900/90 backdrop-blur-xl border border-[#7dd3fc]/75 dark:border-slate-800 text-center text-sm text-slate-600 dark:text-slate-400">
+              <div className="p-6 rounded-2xl bg-[#e3f3ff]/55 dark:bg-slate-900/75 backdrop-blur-md border border-white/65 dark:border-slate-800 text-center text-sm font-medium text-slate-900 dark:text-slate-200 shadow-xs">
                 Send a message, photo, or document below to start chatting. All messages translate automatically.
               </div>
             ) : (
@@ -4272,12 +4169,13 @@ export function ChatWorkspace() {
                   >
                     <div
                       onPointerDown={() => {
-                        if (!isMine || msg.deleted) return;
+                        if (msg.deleted) return;
                         if (longPressTimerRef.current !== null) {
                           window.clearTimeout(longPressTimerRef.current);
                         }
                         longPressTimerRef.current = window.setTimeout(() => {
                           setLongPressMsgId(msg.messageId);
+                          setDeleteDialogMsg(msg);
                         }, 550);
                       }}
                       onPointerUp={() => {
@@ -4295,7 +4193,7 @@ export function ChatWorkspace() {
                       className={`max-w-[85%] sm:max-w-[70%] rounded-2xl px-4 py-3 shadow-sm ${
                         isMine
                           ? activeBubbleStyle
-                          : 'bg-[#e6f4ff]/88 dark:bg-slate-900 backdrop-blur-xl border border-[#7dd3fc]/75 dark:border-slate-800 text-slate-900 dark:text-white'
+                          : 'bg-[#e6f4ff]/68 dark:bg-slate-900/80 backdrop-blur-md border border-white/70 dark:border-slate-800 text-slate-900 dark:text-white'
                       } ${longPressMsgId === msg.messageId ? 'ring-2 ring-rose-500' : ''}`}
                     >
                       <div className="flex items-center justify-between gap-4 text-[11px] opacity-80 mb-1">
@@ -4643,8 +4541,27 @@ export function ChatWorkspace() {
                             </button>
                           );
                         }
+                        if (msg.deleted) {
+                          return (
+                            <p className="text-sm leading-relaxed italic opacity-80 flex items-center gap-1.5">
+                              <span>🚫</span>
+                              <span>
+                                {isMine ? 'You deleted this message' : 'This message was deleted'}
+                              </span>
+                            </p>
+                          );
+                        }
+                        const isSingleAnimatedEmoji =
+                          msg.messageType === 'sticker' &&
+                          WHATSAPP_ANIMATED_EMOJIS.some((item) => item.emoji === displayedText.trim());
                         return (
-                          <p className={`text-sm leading-relaxed ${msg.deleted ? 'italic opacity-70' : ''}`}>
+                          <p
+                            className={`leading-relaxed ${
+                              isSingleAnimatedEmoji
+                                ? 'text-4xl animate-pk-emoji-pop py-1'
+                                : 'text-sm'
+                            }`}
+                          >
                             {displayedText}
                           </p>
                         );
@@ -4728,45 +4645,20 @@ export function ChatWorkspace() {
                       </div>
                     </div>
 
-                    {/* Long-Press Unsend Prompt & Quick Message Actions */}
-                    {!msg.deleted && longPressMsgId === msg.messageId && isMine && (
-                      <div className="mt-1.5 px-3 py-1.5 rounded-xl bg-rose-50 dark:bg-rose-950/70 border border-rose-300 dark:border-rose-700 flex items-center gap-2 text-xs">
-                        <span className="font-semibold text-rose-800 dark:text-rose-200">
-                          Unsend message?
-                        </span>
-                        <button
-                          type="button"
-                          onClick={async () => {
-                            await deleteMessage(msg.messageId);
-                            setLongPressMsgId(null);
-                            setChatSecurityToast('🗑️ Message deleted for everyone!');
-                          }}
-                          className="px-2.5 py-1 rounded-lg bg-rose-600 hover:bg-rose-700 text-white font-bold"
-                        >
-                          Delete for Everyone
-                        </button>
-                        <button
-                          type="button"
-                          onClick={() => setLongPressMsgId(null)}
-                          className="px-2 py-1 rounded-lg text-slate-600 dark:text-slate-300 font-semibold"
-                        >
-                          Cancel
-                        </button>
-                      </div>
-                    )}
-
                     {/* Quick message actions */}
                     {!msg.deleted && (
-                      <div className="mt-1 flex items-center gap-2 px-1 text-[11px] text-slate-500 dark:text-slate-400">
+                      <div className="mt-1 flex items-center gap-2.5 px-1.5 py-0.5 rounded-full bg-[#e3f3ff]/65 dark:bg-slate-900/70 backdrop-blur-md text-[11px] font-medium text-slate-800 dark:text-slate-300">
                         <button
+                          type="button"
                           onClick={() => setReplyTarget(msg)}
-                          className="hover:text-slate-900 dark:hover:text-white flex items-center gap-1"
+                          className="hover:text-[#0284c7] dark:hover:text-white flex items-center gap-1"
                         >
                           <Reply className="w-3 h-3" /> Reply
                         </button>
                         <button
+                          type="button"
                           onClick={() => setForwardMsg(msg)}
-                          className="hover:text-slate-900 dark:hover:text-white flex items-center gap-1"
+                          className="hover:text-[#0284c7] dark:hover:text-white flex items-center gap-1"
                         >
                           <Forward className="w-3 h-3" /> Forward
                         </button>
@@ -4788,18 +4680,16 @@ export function ChatWorkspace() {
                         >
                           <BellPlus className="w-3 h-3" /> Remember
                         </button>
-                        {msg.senderId === userProfile?.uid && (
-                          <button
-                            onClick={async () => {
-                              await deleteMessage(msg.messageId);
-                              setLongPressMsgId(null);
-                              setChatSecurityToast('🗑️ Message deleted for everyone!');
-                            }}
-                            className="hover:text-rose-600 flex items-center gap-1"
-                          >
-                            <Trash2 className="w-3 h-3" /> Delete
-                          </button>
-                        )}
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setLongPressMsgId(msg.messageId);
+                            setDeleteDialogMsg(msg);
+                          }}
+                          className="hover:text-rose-600 flex items-center gap-1"
+                        >
+                          <Trash2 className="w-3 h-3" /> Delete
+                        </button>
                       </div>
                     )}
                   </div>
@@ -5189,38 +5079,136 @@ export function ChatWorkspace() {
           )}
 
           {showStickers && (
-            <div className="mb-2 p-2.5 rounded-2xl bg-[#dff1ff]/88 dark:bg-slate-950 backdrop-blur-xl border border-[#7dd3fc]/75 dark:border-slate-800 space-y-2">
-              <div className="flex flex-wrap items-center gap-1.5 pb-2 border-b border-[#7dd3fc]/60 dark:border-slate-800">
-                <span className="text-[11px] font-bold text-[#0284c7] dark:text-[#33b3ff] mr-1">
-                  ✨ Viber Float:
-                </span>
-                {(['❤️', '😂', '😍', '🎉', '🔥', '👍', '🪔'] as const).map((em) => (
-                  <button
-                    key={em}
-                    type="button"
-                    onClick={() => {
-                      spawnViberEmoji(em);
-                      handleSendSticker(em);
-                    }}
-                    className="w-8 h-8 rounded-full bg-[#eef8ff]/90 dark:bg-slate-900 border border-[#7dd3fc]/75 dark:border-slate-700 text-base flex items-center justify-center hover:scale-110 transition-transform"
-                    aria-label={`Send floating ${em}`}
-                  >
-                    {em}
-                  </button>
-                ))}
+            <div className="max-w-4xl mx-auto mb-2.5 p-3 rounded-2xl bg-[#dff1ff]/88 dark:bg-slate-950/92 backdrop-blur-xl border border-[#7dd3fc]/75 dark:border-slate-800 space-y-2.5 shadow-lg">
+              {/* WhatsApp-Style Picker Tabs: Animated Emojis · Emojis · Stickers · Stylish Text */}
+              <div className="flex items-center justify-between gap-2 pb-2 border-b border-[#7dd3fc]/60 dark:border-slate-800">
+                <div className="flex items-center gap-1.5 overflow-x-auto">
+                  {(
+                    [
+                      { id: 'animated', label: '✨ Animated' },
+                      { id: 'emojis', label: '😊 Emojis' },
+                      { id: 'stickers', label: '🎨 Stickers' },
+                      { id: 'fonts', label: '𝓕 Stylish Text' },
+                    ] as const
+                  ).map((tab) => (
+                    <button
+                      key={tab.id}
+                      type="button"
+                      onClick={() => setEmojiPickerTab(tab.id)}
+                      className={`px-3 py-1.5 rounded-xl text-xs font-bold whitespace-nowrap transition-colors ${
+                        emojiPickerTab === tab.id
+                          ? 'bg-[#0284c7] text-white shadow-xs'
+                          : 'bg-[#eef8ff]/85 dark:bg-slate-900 text-slate-700 dark:text-slate-300 border border-[#7dd3fc]/60 dark:border-slate-700'
+                      }`}
+                    >
+                      {tab.label}
+                    </button>
+                  ))}
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setShowStickers(false)}
+                  aria-label="Close emoji picker"
+                  className="p-1.5 rounded-lg text-slate-600 dark:text-slate-300 hover:bg-black/10 shrink-0"
+                >
+                  <X className="w-4 h-4" />
+                </button>
               </div>
-              <div className="flex flex-wrap gap-2">
-                {STICKERS.map((s) => (
-                  <button
-                    key={s}
-                    type="button"
-                    onClick={() => handleSendSticker(s)}
-                    className="px-3 py-1.5 rounded-xl bg-[#eef8ff]/90 dark:bg-slate-900 border border-[#7dd3fc]/75 dark:border-slate-800 text-xs font-medium hover:border-[#0284c7]"
-                  >
-                    {s}
-                  </button>
-                ))}
-              </div>
+
+              {emojiPickerTab === 'animated' && (
+                <div className="space-y-2">
+                  <p className="text-[11px] font-semibold text-[#0369a1] dark:text-[#38bdf8]">
+                    Tap any animated emoji to send &amp; play smooth chat animation
+                  </p>
+                  <div className="grid grid-cols-5 sm:grid-cols-10 gap-2">
+                    {WHATSAPP_ANIMATED_EMOJIS.map((item) => (
+                      <button
+                        key={item.emoji}
+                        type="button"
+                        onClick={() => {
+                          spawnViberEmoji(item.emoji);
+                          void handleSendSticker(item.emoji);
+                        }}
+                        className="min-h-[44px] rounded-2xl bg-[#eef8ff]/85 dark:bg-slate-900 border border-white/75 dark:border-slate-700 text-2xl flex items-center justify-center hover:scale-110 active:scale-95 transition-transform shadow-xs"
+                        aria-label={`Send animated ${item.label} emoji`}
+                        title={`Send animated ${item.label}`}
+                      >
+                        <span className="animate-pk-emoji-pop">{item.emoji}</span>
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {emojiPickerTab === 'emojis' && (
+                <div className="grid grid-cols-8 sm:grid-cols-10 gap-1.5 max-h-44 overflow-y-auto pr-1">
+                  {WHATSAPP_STANDARD_EMOJIS.map((em) => (
+                    <button
+                      key={`std_${em}`}
+                      type="button"
+                      onClick={() => setMessageInput((prev) => `${prev}${em}`)}
+                      className="min-h-[38px] rounded-xl hover:bg-white/70 dark:hover:bg-slate-800 text-xl flex items-center justify-center transition-transform active:scale-90"
+                      aria-label={`Insert ${em}`}
+                    >
+                      {em}
+                    </button>
+                  ))}
+                </div>
+              )}
+
+              {emojiPickerTab === 'stickers' && (
+                <div className="flex flex-wrap gap-2">
+                  {STICKERS.map((s) => (
+                    <button
+                      key={s}
+                      type="button"
+                      onClick={() => void handleSendSticker(s)}
+                      className="px-3 py-1.5 rounded-xl bg-[#eef8ff]/90 dark:bg-slate-900 border border-[#7dd3fc]/75 dark:border-slate-800 text-xs font-medium hover:border-[#0284c7]"
+                    >
+                      {s}
+                    </button>
+                  ))}
+                </div>
+              )}
+
+              {emojiPickerTab === 'fonts' && (
+                <div className="space-y-2 text-xs">
+                  <p className="text-[11px] font-semibold text-[#0369a1] dark:text-[#38bdf8]">
+                    Select a style for text you type, or tap &ldquo;Apply to Input&rdquo; to format text already entered:
+                  </p>
+                  <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
+                    {(
+                      [
+                        { id: 'normal', label: 'Normal', sample: 'Hello PK Chat' },
+                        { id: 'bold', label: '𝗕𝗼𝗹𝗱', sample: applyStylishFont('Hello PK Chat', 'bold') },
+                        { id: 'italic', label: '𝘐𝘵𝘢𝘭𝘪𝘤', sample: applyStylishFont('Hello PK Chat', 'italic') },
+                        { id: 'fancy', label: '𝓕𝓪𝓷𝓬𝔂', sample: applyStylishFont('Hello PK Chat', 'fancy') },
+                        { id: 'mono', label: '𝙼𝚘𝚗𝚘', sample: applyStylishFont('Hello PK Chat', 'mono') },
+                        { id: 'caps', label: 'CAPS ✨', sample: applyStylishFont('Hello PK Chat', 'caps') },
+                      ] as const
+                    ).map((opt) => (
+                      <button
+                        key={`picker_font_${opt.id}`}
+                        type="button"
+                        onClick={() => {
+                          setFontStyle(opt.id);
+                          if (messageInput.trim() && opt.id !== 'normal') {
+                            setMessageInput((prev) => applyStylishFont(prev, opt.id));
+                          }
+                        }}
+                        className={`p-2 rounded-xl border text-left transition-colors ${
+                          fontStyle === opt.id
+                            ? 'bg-[#0284c7] text-white border-[#0284c7]'
+                            : 'bg-[#eef8ff]/85 dark:bg-slate-900 border-[#7dd3fc]/70 dark:border-slate-700 text-slate-900 dark:text-white'
+                        }`}
+                      >
+                        <p className="font-bold text-xs">{opt.label}</p>
+                        <p className="text-[11px] opacity-85 truncate">{opt.sample}</p>
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              )}
             </div>
           )}
 
@@ -5426,26 +5414,33 @@ export function ChatWorkspace() {
             </div>
           )}
 
-          {/* Stylish Unicode Font Selector Strip */}
+          {/* Stylish Unicode Text Formatting Strip (Formats text being typed OR already entered) */}
           <div className="max-w-4xl mx-auto mb-2 flex flex-wrap items-center justify-between gap-2 text-[11px]">
             <div className="flex flex-wrap items-center gap-1.5">
-              <span className="font-bold text-slate-500 dark:text-slate-400">Font:</span>
+              <span className="font-bold text-slate-600 dark:text-slate-400">Style:</span>
               {(
                 [
                   { id: 'normal', label: 'Normal' },
                   { id: 'bold', label: '𝗕𝗼𝗹𝗱' },
+                  { id: 'italic', label: '𝘐𝘵𝘢𝘭𝘪𝘤' },
                   { id: 'fancy', label: '𝓕𝓪𝓷𝓬𝔂' },
+                  { id: 'mono', label: '𝙼𝚘𝚗𝚘' },
                   { id: 'caps', label: 'CAPS ✨' },
                 ] as const
               ).map((opt) => (
                 <button
                   key={opt.id}
                   type="button"
-                  onClick={() => setFontStyle(opt.id)}
+                  onClick={() => {
+                    setFontStyle(opt.id);
+                    if (messageInput.trim() && opt.id !== 'normal') {
+                      setMessageInput((prev) => applyStylishFont(prev, opt.id));
+                    }
+                  }}
                   className={`px-2.5 py-1 rounded-lg border font-semibold transition-colors ${
                     fontStyle === opt.id
                       ? 'bg-[#0284c7] text-white border-[#0284c7]'
-                      : 'bg-[#eef8ff]/85 dark:bg-slate-950 border-[#7dd3fc]/75 dark:border-slate-800 text-slate-700 dark:text-slate-300 hover:border-[#0284c7]'
+                      : 'bg-[#eef8ff]/85 dark:bg-slate-950 border-[#7dd3fc]/75 dark:border-slate-800 text-slate-800 dark:text-slate-300 hover:border-[#0284c7]'
                   }`}
                 >
                   {opt.label}
@@ -5458,6 +5453,19 @@ export function ChatWorkspace() {
               </span>
             )}
           </div>
+
+          {!isGroup && activePartner?.blocked && (
+            <div className="max-w-4xl mx-auto mb-2 px-3 py-2 rounded-xl bg-rose-50/90 dark:bg-rose-950/60 border border-rose-200 dark:border-rose-800 flex items-center justify-between gap-2 text-xs text-rose-800 dark:text-rose-200">
+              <span>You blocked this contact. Manage blocked users in Settings.</span>
+              <button
+                type="button"
+                onClick={() => setActiveScreen('privacy_security')}
+                className="font-bold text-[#0284c7] dark:text-[#38bdf8] underline shrink-0"
+              >
+                Open Settings
+              </button>
+            </div>
+          )}
 
           <input
             ref={photoInputRef}
@@ -5782,6 +5790,67 @@ export function ChatWorkspace() {
       )}
 
       {/* Inline Block / Unblock Partner Confirmation Modal (No native window.confirm) */}
+      {/* WhatsApp-Style Delete Message Modal (Delete for everyone / Delete for me) */}
+      {deleteDialogMsg && (
+        <div
+          role="dialog"
+          aria-modal="true"
+          aria-label="Delete message options"
+          className="fixed inset-0 z-[72] bg-black/55 backdrop-blur-xs flex items-center justify-center p-4"
+        >
+          <div className="w-full max-w-xs rounded-3xl pk-glass p-5 space-y-3 shadow-2xl">
+            <h3 className="text-base font-bold text-slate-900 dark:text-white">
+              Delete message?
+            </h3>
+            <p className="text-xs text-slate-700 dark:text-slate-300 leading-relaxed">
+              {deleteDialogMsg.senderId === userProfile?.uid
+                ? 'Choose whether to delete this message for everyone in the chat or only for yourself.'
+                : 'Remove this message from your chat view.'}
+            </p>
+            <div className="flex flex-col gap-2 pt-1">
+              {deleteDialogMsg.senderId === userProfile?.uid && (
+                <button
+                  type="button"
+                  onClick={async () => {
+                    const id = deleteDialogMsg.messageId;
+                    setDeleteDialogMsg(null);
+                    setLongPressMsgId(null);
+                    await deleteMessage(id);
+                    setChatSecurityToast('🚫 Message deleted for everyone.');
+                  }}
+                  className="w-full min-h-[44px] px-4 py-2.5 rounded-2xl bg-rose-600 hover:bg-rose-700 text-white text-sm font-bold text-center shadow-xs"
+                >
+                  Delete for everyone
+                </button>
+              )}
+              <button
+                type="button"
+                onClick={async () => {
+                  const id = deleteDialogMsg.messageId;
+                  setDeleteDialogMsg(null);
+                  setLongPressMsgId(null);
+                  await deleteMessageForMe(id);
+                  setChatSecurityToast('🗑️ Message deleted for you.');
+                }}
+                className="w-full min-h-[44px] px-4 py-2.5 rounded-2xl bg-[#0284c7] hover:bg-[#0369a1] text-white text-sm font-bold text-center shadow-xs"
+              >
+                Delete for me
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  setDeleteDialogMsg(null);
+                  setLongPressMsgId(null);
+                }}
+                className="w-full min-h-[42px] px-4 py-2 rounded-2xl bg-white/70 dark:bg-slate-800 text-slate-800 dark:text-slate-200 text-sm font-semibold text-center border border-[#7dd3fc]/60 dark:border-slate-700"
+              >
+                Cancel
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {blockConfirmTarget && (
         <div
           role="dialog"

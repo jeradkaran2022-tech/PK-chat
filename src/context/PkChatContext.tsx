@@ -401,6 +401,8 @@ interface PkChatContextValue {
     simulateIncomingReplyFrom?: { uid: string; name: string; languageCode: string; languageName: string };
   }) => Promise<void>;
   deleteMessage: (messageId: string) => Promise<void>;
+  deleteMessageForMe: (messageId: string) => Promise<void>;
+  deletedForMeIds: string[];
   markMessageRead: (message: ChatMessage) => Promise<void>;
   setTypingStatus: (chatId: string, isTyping: boolean) => Promise<void>;
   offlineOutboxCount: number;
@@ -887,15 +889,22 @@ export function PkChatProvider({ children }: { children: React.ReactNode }) {
     }
     try {
       const seqDone = localStorage.getItem(`pk_seq_onboarding_done_${firebaseUser.uid}`) === '1';
+      const inActive3StepFlow =
+        sessionStorage.getItem('pk_onboarding_3step_active') === '1' && !seqDone;
       const isGoogleOrEmailUser = Boolean(
         firebaseUser.email ||
           firebaseUser.providerData?.some((p) => p.providerId === 'google.com')
       );
+      const hasRegisteredPhone = Boolean(userAccount?.phoneNumber || firebaseUser.phoneNumber);
       const hasCompleteCloudAccount = Boolean(
-        userProfile && (isGoogleOrEmailUser || userAccount?.phoneNumber || firebaseUser.phoneNumber)
+        userProfile && (hasRegisteredPhone || (isGoogleOrEmailUser && !inActive3StepFlow))
       );
+      if (inActive3StepFlow && !hasRegisteredPhone && activeScreen === 'welcome') {
+        // Keep new first-time user on the 3-step verification flow (Step 2 Photo -> Step 3 Phone)
+        return;
+      }
       if (
-        (seqDone || hasCompleteCloudAccount || isGoogleOrEmailUser) &&
+        (seqDone || hasCompleteCloudAccount || (isGoogleOrEmailUser && !inActive3StepFlow)) &&
         (activeScreen === 'splash' || activeScreen === 'welcome' || activeScreen === 'phone_register')
       ) {
         const deepClassRoom =
@@ -1149,16 +1158,21 @@ export function PkChatProvider({ children }: { children: React.ReactNode }) {
         setUserAccountLoaded(true);
         setUserProfile(existingProfile);
 
-        let seqAlreadyCompleted = Boolean(
-          refreshedUser?.phoneNumber ||
-            user.phoneNumber ||
-            user.email ||
-            user.providerData?.some((p) => p.providerId === 'google.com')
-        );
+        let inActive3StepFlow = false;
+        let seqAlreadyCompleted = Boolean(refreshedUser?.phoneNumber || user.phoneNumber);
         try {
-          if (localStorage.getItem(`pk_seq_onboarding_done_${uid}`) === '1') {
+          const doneFlag = localStorage.getItem(`pk_seq_onboarding_done_${uid}`) === '1';
+          inActive3StepFlow =
+            sessionStorage.getItem('pk_onboarding_3step_active') === '1' && !doneFlag;
+          if (doneFlag || seqAlreadyCompleted) {
             seqAlreadyCompleted = true;
-          } else if (seqAlreadyCompleted) {
+            sessionStorage.removeItem('pk_onboarding_3step_active');
+            localStorage.setItem(`pk_seq_onboarding_done_${uid}`, '1');
+          } else if (
+            !inActive3StepFlow &&
+            (user.email || user.providerData?.some((p) => p.providerId === 'google.com'))
+          ) {
+            seqAlreadyCompleted = true;
             localStorage.setItem(`pk_seq_onboarding_done_${uid}`, '1');
           }
         } catch {
@@ -1421,15 +1435,27 @@ export function PkChatProvider({ children }: { children: React.ReactNode }) {
         });
         setUserAccountLoaded(true);
         setUserProfile(profilePayload);
+        let isRunningFirstTime3Step = false;
+        try {
+          const doneFlag = localStorage.getItem(`pk_seq_onboarding_done_${uid}`) === '1';
+          isRunningFirstTime3Step =
+            sessionStorage.getItem('pk_onboarding_3step_active') === '1' &&
+            !doneFlag &&
+            !claimedPhone;
+        } catch {
+          isRunningFirstTime3Step = false;
+        }
         const isAuthenticatedReadyNow = Boolean(
           claimedPhone ||
             user.phoneNumber ||
-            user.email ||
-            user.isAnonymous ||
-            user.providerData?.some((p) => p.providerId === 'google.com')
+            ((user.email ||
+              user.isAnonymous ||
+              user.providerData?.some((p) => p.providerId === 'google.com')) &&
+              !isRunningFirstTime3Step)
         );
         if (isAuthenticatedReadyNow) {
           try {
+            sessionStorage.removeItem('pk_onboarding_3step_active');
             localStorage.setItem(`pk_seq_onboarding_done_${uid}`, '1');
           } catch {
             // ignore storage errors
@@ -4409,6 +4435,56 @@ export function PkChatProvider({ children }: { children: React.ReactNode }) {
     [isLocalPreviewSession, messages]
   );
 
+  const [deletedForMeIds, setDeletedForMeIds] = useState<string[]>(() => {
+    try {
+      const raw = localStorage.getItem('pk_deleted_for_me_ids');
+      const parsed = raw ? (JSON.parse(raw) as unknown) : [];
+      return Array.isArray(parsed) ? parsed.filter((x): x is string => typeof x === 'string') : [];
+    } catch {
+      return [];
+    }
+  });
+
+  const deleteMessageForMe = useCallback(
+    async (messageId: string) => {
+      const uid = auth.currentUser?.uid || userProfile?.uid || 'local';
+      setDeletedForMeIds((prev) => {
+        if (prev.includes(messageId)) return prev;
+        const next = [...prev.slice(-499), messageId];
+        try {
+          localStorage.setItem('pk_deleted_for_me_ids', JSON.stringify(next));
+        } catch {
+          // Ignore storage quota issues
+        }
+        return next;
+      });
+      setMessages((prev) =>
+        prev.map((m) =>
+          m.messageId === messageId
+            ? {
+                ...m,
+                deletedForUserIds: Array.from(new Set([...(m.deletedForUserIds || []), uid])),
+              }
+            : m
+        )
+      );
+      if (auth.currentUser && !isLocalPreviewSession) {
+        const target = messages.find((m) => m.messageId === messageId);
+        if (target && target.senderId === auth.currentUser.uid) {
+          try {
+            await updateDoc(doc(db, 'messages', messageId), {
+              deletedForUserIds: Array.from(new Set([...(target.deletedForUserIds || []), uid])),
+              updatedAt: serverTimestamp(),
+            });
+          } catch {
+            // Local hide already applied cleanly
+          }
+        }
+      }
+    },
+    [isLocalPreviewSession, messages, userProfile?.uid]
+  );
+
   const markMessageRead = useCallback(async (message: ChatMessage) => {
     const uid = auth.currentUser?.uid;
     if (!uid) return;
@@ -6280,6 +6356,8 @@ export function PkChatProvider({ children }: { children: React.ReactNode }) {
     createGroupChat,
     sendMessage,
     deleteMessage,
+    deleteMessageForMe,
+    deletedForMeIds,
     markMessageRead,
     setTypingStatus,
     offlineOutboxCount: offlineQueuedRecords.length,

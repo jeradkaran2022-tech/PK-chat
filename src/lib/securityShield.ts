@@ -25,7 +25,7 @@ export class SecurityShieldSystem {
 
   isAntiDebugEnabled(): boolean {
     const raw = this.getStorage()?.getItem(this.STORAGE_KEY_ANTI_DEBUG);
-    return raw !== 'false';
+    return raw === 'true';
   }
 
   setAntiDebugEnabled(enabled: boolean): void {
@@ -37,8 +37,8 @@ export class SecurityShieldSystem {
     this.notifyListeners();
   }
 
-  // Safely checks DevTools viewport docking anomaly only in top-level browser windows
-  // (avoids false positives inside split-screen iframe preview hosts)
+  // Safely checks DevTools viewport docking anomaly ONLY on desktop non-touch browsers
+  // (never triggers false positives on mobile phones, Android TWA/APKs, shared links, or soft keyboards)
   isDevToolsViewportAnomaly(threshold = 160): boolean {
     if (typeof window === 'undefined') return false;
     let isEmbedded = false;
@@ -48,10 +48,23 @@ export class SecurityShieldSystem {
       isEmbedded = true;
     }
     if (isEmbedded) return false;
-    const outerW = Number(window.outerWidth || 0);
+
+    const ua = typeof navigator !== 'undefined' ? navigator.userAgent || '' : '';
+    const isMobileUa = /Android|iPhone|iPad|iPod|Mobile|wv|PKChat/i.test(ua);
+    const hasTouch =
+      typeof navigator !== 'undefined' && Number(navigator.maxTouchPoints || 0) > 0;
+    const isCoarsePointer =
+      typeof window.matchMedia === 'function' &&
+      (window.matchMedia('(pointer: coarse)').matches ||
+        window.matchMedia('(display-mode: standalone)').matches);
     const innerW = Number(window.innerWidth || 0);
-    const outerH = Number(window.outerHeight || 0);
     const innerH = Number(window.innerHeight || 0);
+    if (isMobileUa || hasTouch || isCoarsePointer || innerW < 1024) {
+      return false;
+    }
+
+    const outerW = Number(window.outerWidth || 0);
+    const outerH = Number(window.outerHeight || 0);
     if (outerW <= 0 || innerW <= 0 || outerH <= 0 || innerH <= 0) return false;
     return outerW - innerW > threshold || outerH - innerH > threshold;
   }
@@ -82,7 +95,7 @@ export class SecurityShieldSystem {
   }
 
   // 1. Check security status at startup or during runtime countdown
-  checkSecurityStatus(preferredLangCode = 'ta'): SecurityShieldStatus {
+  checkSecurityStatus(preferredLangCode = 'en'): SecurityShieldStatus {
     const storage = this.getStorage();
     const lockoutRaw = storage?.getItem(this.STORAGE_KEY_LOCK_TIME);
 
@@ -95,12 +108,12 @@ export class SecurityShieldSystem {
         const seconds = remainingSeconds % 60;
         const reason =
           storage?.getItem(this.STORAGE_KEY_LOCK_REASON) ||
-          'அனுமதிக்கப்படாத ஊடுருவல் அல்லது ஆய்வு முயற்சி கண்டறியப்பட்டது';
+          'Verified unauthorized tampering or bypass attempt detected';
         const alertSent = Boolean(storage?.getItem(this.STORAGE_KEY_ALERT_SENT));
         const isTamil = preferredLangCode.toLowerCase().startsWith('ta');
         const message = isTamil
           ? `பாதுகாப்பு காரணங்களுக்காக செயலி இடைநிறுத்தப்பட்டுள்ளது. மீதமுள்ள நேரம்: ${minutes} நிமிடங்கள் மற்றும் ${seconds} விநாடிகள்.`
-          : `App temporarily paused for security protection. Time remaining: ${minutes} min ${seconds} sec (மீதமுள்ள நேரம்: ${minutes} நிமிடங்கள் ${seconds} விநாடிகள்).`;
+          : `App temporarily paused for verified security protection. Time remaining: ${minutes} min ${seconds} sec.`;
 
         return {
           isLocked: true,
@@ -211,6 +224,8 @@ const DANGEROUS_TEXT_PATTERNS: Array<{ label: string; regex: RegExp }> = [
 ];
 
 export const MAX_DOC_IMAGE_BYTES = 25 * 1024 * 1024; // 25 MB for docs, images, and audio
+export const MAX_STATUS_VIDEO_BYTES = 100 * 1024 * 1024; // 100 MB for longer status videos
+export const MAX_STATUS_VIDEO_SECONDS = 180; // 3 minutes (longer than standard 30s/60s status clips)
 export const MAX_LARGE_VIDEO_BYTES = 2 * 1024 * 1024 * 1024; // 2 GB for up to 4-hour videos
 export const MAX_VIDEO_DURATION_SECONDS = 4 * 60 * 60; // 4 hours (14,400 seconds)
 

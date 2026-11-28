@@ -177,73 +177,91 @@ export function IncomingCallOverlay() {
       role="alertdialog"
       aria-modal="true"
       aria-label="Incoming PK Chat Call"
-      className="fixed inset-x-0 top-16 z-[82] p-3 sm:p-5 flex justify-center pointer-events-none"
+      className="fixed inset-0 z-[82] bg-gradient-to-b from-[#071f3a]/94 via-[#0a2d52]/95 to-[#06182d]/97 backdrop-blur-2xl flex flex-col items-center justify-between p-6 sm:p-8 text-white"
     >
-      <div className="pointer-events-auto w-full max-w-md rounded-3xl border-2 border-[#38bdf8] bg-gradient-to-b from-white/95 via-[#f0f9ff]/95 to-[#e0f2fe]/95 text-slate-900 shadow-[0_14px_45px_rgba(2,132,199,0.34)] backdrop-blur-2xl overflow-hidden">
-        <div className="px-4 py-3 bg-gradient-to-r from-[#0284c7] via-[#0ea5e9] to-[#0077B6] text-white flex items-center justify-between gap-2">
-          <div className="flex items-center gap-2.5 min-w-0">
-            <span className="w-9 h-9 rounded-full bg-white/20 flex items-center justify-center animate-pulse shrink-0">
-              {activeIncoming.callType === 'video' ? (
-                <Video className="w-4 h-4 text-white" />
-              ) : (
-                <Phone className="w-4 h-4 text-white" />
-              )}
-            </span>
-            <div className="min-w-0">
-              <p className="text-[11px] font-extrabold uppercase tracking-wider text-sky-100 truncate">
-                {activeIncoming.isGroup ? 'Incoming Group Call' : 'Incoming PK Chat Call'} ·{' '}
-                {mutedRing ? 'Muted' : ringingNow ? 'Ringing...' : 'Active'}
-              </p>
-              <p className="text-sm sm:text-base font-bold text-white truncate">
-                {activeIncoming.callerName}
-              </p>
-              {activeIncoming.callerPhone && (
-                <p className="text-[11px] font-mono text-sky-100 truncate">
-                  {activeIncoming.callerPhone}
-                </p>
-              )}
-            </div>
+      {/* Top WhatsApp-style Encryption & Call Type Header */}
+      <div className="w-full max-w-md pt-4 text-center space-y-1.5">
+        <p className="text-[11px] font-semibold uppercase tracking-widest text-sky-200/90">
+          End-to-End Encrypted · {activeIncoming.isGroup ? 'Incoming Group Call' : 'Incoming PK Chat Call'}
+        </p>
+        <p className="text-xs font-bold text-[#7dd3fc]">
+          {activeIncoming.callType === 'video' ? 'PK Chat Video Call' : 'PK Chat Voice Call'} ·{' '}
+          {mutedRing ? 'Muted' : ringingNow ? 'Ringing...' : 'Active'}
+        </p>
+      </div>
+
+      {/* Center Caller Avatar, Name, Number & Quick Mute Ring */}
+      <div className="flex flex-col items-center text-center space-y-4 my-auto">
+        <div className="relative flex items-center justify-center">
+          <span
+            aria-hidden="true"
+            className="absolute w-36 h-36 rounded-full bg-sky-400/20 animate-ping"
+          />
+          <div className="relative w-28 h-28 rounded-full bg-gradient-to-br from-[#38bdf8] via-[#0284c7] to-[#0369a1] border-2 border-white/45 flex items-center justify-center text-3xl font-extrabold shadow-[0_12px_40px_rgba(56,189,248,0.45)]">
+            {activeIncoming.callType === 'video' ? (
+              <Video className="w-11 h-11 text-white" />
+            ) : (
+              <Phone className="w-11 h-11 text-white" />
+            )}
           </div>
-          <button
-            type="button"
-            onClick={handleToggleMuteRing}
-            aria-label={mutedRing ? 'Unmute Ringtone' : 'Mute Ringtone'}
-            className="px-2.5 py-1.5 rounded-xl bg-white/20 hover:bg-white/30 border border-white/30 text-white text-[11px] font-bold flex items-center gap-1 shrink-0"
-          >
-            {mutedRing ? <Volume2 className="w-3.5 h-3.5" /> : <VolumeX className="w-3.5 h-3.5" />}
-            <span>{mutedRing ? 'Unmute' : 'Mute Ring'}</span>
-          </button>
         </div>
 
-        <div className="p-4 space-y-3">
-          <p className="text-xs text-slate-600 text-center">
-            {activeIncoming.isSimulated
-              ? 'PK CHAT Signature Melody (soft marimba, bell & ambient notes) looping until you Answer, Mute, or Decline.'
-              : 'PK CHAT Signature Melody playing smoothly · Choose Answer, Mute Ring, or Decline.'}
-          </p>
+        <div className="space-y-1">
+          <h2 className="text-2xl sm:text-3xl font-extrabold text-white tracking-tight">
+            {activeIncoming.callerName}
+          </h2>
+          {activeIncoming.callerPhone && (
+            <p className="text-sm font-mono text-sky-200">
+              {activeIncoming.callerPhone}
+            </p>
+          )}
+        </div>
 
-          <div className="grid grid-cols-2 gap-2.5">
-            <button
-              type="button"
-              onClick={() => void handleAnswer()}
-              className="min-h-[46px] px-4 py-2.5 rounded-2xl bg-gradient-to-r from-[#0284c7] to-[#0ea5e9] hover:from-[#0369a1] hover:to-[#0284c7] text-white font-extrabold text-sm flex items-center justify-center gap-2 shadow-md transition-all"
-            >
-              {activeIncoming.callType === 'video' ? (
-                <Video className="w-4 h-4 shrink-0" />
-              ) : (
-                <Phone className="w-4 h-4 shrink-0" />
-              )}
-              <span>Answer</span>
-            </button>
-            <button
-              type="button"
-              onClick={() => void handleDecline()}
-              className="min-h-[46px] px-4 py-2.5 rounded-2xl bg-rose-600 hover:bg-rose-700 text-white font-bold text-sm flex items-center justify-center gap-2 shadow-sm transition-colors"
-            >
-              <PhoneOff className="w-4 h-4 shrink-0" />
-              <span>Decline</span>
-            </button>
-          </div>
+        <button
+          type="button"
+          onClick={handleToggleMuteRing}
+          aria-label={mutedRing ? 'Unmute Ringtone' : 'Mute Ringtone'}
+          className="px-4 py-2 rounded-full bg-white/15 hover:bg-white/25 border border-white/25 text-white text-xs font-semibold inline-flex items-center gap-1.5 backdrop-blur-md"
+        >
+          {mutedRing ? <Volume2 className="w-4 h-4" /> : <VolumeX className="w-4 h-4" />}
+          <span>{mutedRing ? 'Unmute Ring' : 'Mute Ring'}</span>
+        </button>
+
+        <p className="text-[11px] text-sky-100/75 max-w-xs">
+          {activeIncoming.isSimulated
+            ? 'PK CHAT Signature Melody (soft marimba, bell & ambient notes) looping until you Answer, Mute, or Decline.'
+            : 'PK CHAT Signature Melody playing smoothly · Tap Answer on the right or Decline on the left.'}
+        </p>
+      </div>
+
+      {/* Bottom WhatsApp-Exact Positions: Decline (Left) & Answer (Right) */}
+      <div className="w-full max-w-xs pb-6 flex items-center justify-between gap-8">
+        <div className="flex flex-col items-center gap-2">
+          <button
+            type="button"
+            onClick={() => void handleDecline()}
+            aria-label="Decline"
+            className="w-16 h-16 rounded-full bg-[#ea0038] hover:bg-rose-700 text-white flex items-center justify-center shadow-[0_10px_28px_rgba(234,0,56,0.45)] active:scale-95 transition-all"
+          >
+            <PhoneOff className="w-7 h-7" />
+          </button>
+          <span className="text-xs font-semibold text-white/90">Decline</span>
+        </div>
+
+        <div className="flex flex-col items-center gap-2">
+          <button
+            type="button"
+            onClick={() => void handleAnswer()}
+            aria-label="Answer"
+            className="w-16 h-16 rounded-full bg-gradient-to-br from-[#38bdf8] to-[#0284c7] hover:brightness-110 text-white flex items-center justify-center shadow-[0_10px_30px_rgba(56,189,248,0.55)] ring-4 ring-sky-400/25 active:scale-95 transition-all animate-pulse"
+          >
+            {activeIncoming.callType === 'video' ? (
+              <Video className="w-7 h-7" />
+            ) : (
+              <Phone className="w-7 h-7" />
+            )}
+          </button>
+          <span className="text-xs font-semibold text-white/90">Answer</span>
         </div>
       </div>
     </div>

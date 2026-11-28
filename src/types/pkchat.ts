@@ -181,6 +181,7 @@ export interface ChatMessage {
   replyToText?: string;
   forwardedFrom?: string;
   deleted: boolean;
+  deletedForUserIds?: string[];
   burnAfterSeconds?: number;
   expiresAtMs?: number;
   deliveredTo?: string[];

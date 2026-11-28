@@ -15,6 +15,7 @@ interface ProfileImageEditorModalProps {
   open: boolean;
   mode: 'avatar' | 'cover';
   initialImageUrl?: string;
+  initialAction?: 'camera' | 'gallery' | null;
   onClose: () => void;
   onSaveComplete: (result: {
     dataUrl: string;
@@ -27,6 +28,7 @@ export function ProfileImageEditorModal({
   open,
   mode,
   initialImageUrl,
+  initialAction = null,
   onClose,
   onSaveComplete,
 }: ProfileImageEditorModalProps) {
@@ -62,13 +64,16 @@ export function ProfileImageEditorModal({
       setProgressPct(0);
       setErrorMsg(null);
       setBusy(false);
+      if (initialAction === 'camera') {
+        void handleStartCamera();
+      }
     } else {
       stopCamera();
     }
     return () => {
       stopCamera();
     };
-  }, [open, initialImageUrl]);
+  }, [open, initialImageUrl, initialAction]);
 
   if (!open) return null;
 
