@@ -286,10 +286,13 @@ service cloud.firestore {
 
     function isValidCallRecord(data) {
       return data.keys().hasAll(['callId', 'callerId', 'callerName', 'participantIds', 'callType', 'status', 'sourceLanguage', 'targetLanguage', 'durationSeconds', 'createdAt', 'updatedAt'])
-        && data.keys().hasOnly(['callId', 'callerId', 'callerName', 'participantIds', 'callType', 'status', 'sourceLanguage', 'targetLanguage', 'durationSeconds', 'offerSdp', 'answerSdp', 'createdAt', 'updatedAt'])
+        && data.keys().hasOnly(['callId', 'callerId', 'callerName', 'callerPhone', 'targetName', 'targetPhone', 'participantIds', 'callType', 'status', 'sourceLanguage', 'targetLanguage', 'durationSeconds', 'offerSdp', 'answerSdp', 'createdAt', 'updatedAt'])
         && isValidId(data.callId)
         && isValidId(data.callerId)
         && data.callerName is string && data.callerName.size() >= 1 && data.callerName.size() <= 100
+        && (!('callerPhone' in data) || (data.callerPhone is string && data.callerPhone.size() <= 32))
+        && (!('targetName' in data) || (data.targetName is string && data.targetName.size() <= 100))
+        && (!('targetPhone' in data) || (data.targetPhone is string && data.targetPhone.size() <= 32))
         && data.participantIds is list && data.participantIds.size() >= 1 && data.participantIds.size() <= 20 && data.participantIds[0] is string
         && data.callType in ['audio', 'video']
         && data.status in ['ringing', 'active', 'ended', 'missed']
@@ -1124,6 +1127,9 @@ service cloud.firestore {
         && incoming().callId == existing().callId
         && incoming().callerId == existing().callerId
         && incoming().callerName == existing().callerName
+        && (!('callerPhone' in existing()) ? !('callerPhone' in incoming()) : incoming().callerPhone == existing().callerPhone)
+        && (!('targetName' in existing()) ? !('targetName' in incoming()) : incoming().targetName == existing().targetName)
+        && (!('targetPhone' in existing()) ? !('targetPhone' in incoming()) : incoming().targetPhone == existing().targetPhone)
         && incoming().participantIds == existing().participantIds
         && incoming().callType == existing().callType
         && incoming().sourceLanguage == existing().sourceLanguage

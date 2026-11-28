@@ -4530,21 +4530,26 @@ export function PkChatProvider({ children }: { children: React.ReactNode }) {
       const uid = auth.currentUser?.uid;
       if (!uid) throw new Error('Sign in required for calls.');
       const callId = `call_${Date.now()}_${Math.random().toString(36).slice(2, 6)}`;
-      const safeOwnName =
+      const safeOwnName = (
         userProfile?.fullName && !userProfile.fullName.includes('@')
           ? userProfile.fullName.trim()
-          : 'PK User';
+          : 'PK User'
+      ).slice(0, 100) || 'PK User';
       const ownPhone = (
         userAccount?.phoneNumber ||
         firebaseUser?.phoneNumber ||
         pendingPhoneRef.current ||
         ''
-      ).trim();
+      )
+        .trim()
+        .slice(0, 32);
       const safeTargetName =
         params.targetName && !params.targetName.includes('@')
-          ? params.targetName.trim()
+          ? params.targetName.trim().slice(0, 100)
           : undefined;
-      const safeTargetPhone = params.targetPhone?.trim() || undefined;
+      const safeTargetPhone = params.targetPhone?.trim().slice(0, 32) || undefined;
+      const safeSourceLang = (userProfile?.preferredLanguage?.trim() || 'en').slice(0, 16);
+      const safeTargetLang = (params.targetLanguage?.trim() || 'en').slice(0, 16);
       const record: Record<string, unknown> = {
         callId,
         callerId: uid,
@@ -4552,11 +4557,11 @@ export function PkChatProvider({ children }: { children: React.ReactNode }) {
         ...(ownPhone ? { callerPhone: ownPhone } : {}),
         ...(safeTargetName ? { targetName: safeTargetName } : {}),
         ...(safeTargetPhone ? { targetPhone: safeTargetPhone } : {}),
-        participantIds: Array.from(new Set([uid, ...params.participantIds])).slice(0, 20),
+        participantIds: Array.from(new Set([uid, ...params.participantIds.filter(Boolean)])).slice(0, 20),
         callType: params.callType,
         status: 'ringing',
-        sourceLanguage: userProfile?.preferredLanguage || 'en',
-        targetLanguage: params.targetLanguage,
+        sourceLanguage: safeSourceLang.length >= 2 ? safeSourceLang : 'en',
+        targetLanguage: safeTargetLang.length >= 2 ? safeTargetLang : 'en',
         durationSeconds: 0,
         createdAt: serverTimestamp(),
         updatedAt: serverTimestamp(),
